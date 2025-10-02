@@ -1,0 +1,73 @@
+"use client";
+
+import CrossedLink from "@/components/ui/crossed-link";
+import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+
+const navigationLinks = [
+  { name: "Clothings", href: "/clothings" },
+  { name: "Accessories", href: "/accessories" },
+  { name: "Candles & Matches", href: "/candles-matches" },
+  { name: "Artwork", href: "/artwork" },
+  { name: "Hoodhub", href: "/hoodhub" },
+  { name: "Contact", href: "/contact" },
+];
+
+const backgroundImages = [
+  "/banner/HoodSkool_банер 1 _resized.jpg", 
+  "/banner/HoodSkool_банер 2 копия_resized.jpg",
+  "/banner/HoodSkool_банер правка.jpg",
+];
+
+export default function Hero() {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => 
+        (prevIndex + 1) % backgroundImages.length
+      );
+    }, 10000); // Change image every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <section className="sticky top-0 h-[95vh] md:h-screen w-full flex items-center justify-center overflow-hidden">
+      {/* Animated Background Images - Lower z-index */}
+      <div className="absolute inset-0 z-0">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={currentImageIndex}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url('${backgroundImages[currentImageIndex]}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+          />
+        </AnimatePresence>
+      </div>
+      
+      {/* Navigation Links - Higher z-index to stay above Info section */}
+      <nav className="flex flex-col items-center justify-center gap-3 md:gap-4">
+        {navigationLinks.map((link) => (
+          <CrossedLink
+            key={link.name}
+            href={link.href}
+            lineColor="gold"
+          >
+            <span className="font-body text-black text-sm md:text-base lg:text-lg tracking-wide">
+              {link.name}
+            </span>
+          </CrossedLink>
+        ))}
+      </nav>
+    </section>
+  );
+}
