@@ -15,8 +15,8 @@ const navigationLinks = [
 
 const backgroundImages = [
   "/banner/HoodSkool_банер 1 _resized.jpg", 
-  "/banner/HoodSkool_банер 2 копия_resized.jpg",
   "/banner/HoodSkool_банер правка.jpg",
+  "/banner/HoodSkool_банер 2 копия_resized.jpg",
 ];
 
 export default function Hero() {
@@ -35,7 +35,7 @@ export default function Hero() {
   return (
     <section className="sticky top-0 h-[95vh] md:h-screen w-full flex items-center justify-center overflow-hidden">
       {/* Animated Background Images - Lower z-index */}
-      <div className="absolute inset-0 z-0">
+      <div className="absolute inset-0 z-0 hidden md:block">
         <AnimatePresence initial={false}>
           <motion.div
             key={currentImageIndex}
@@ -43,7 +43,26 @@ export default function Hero() {
             style={{
               backgroundImage: `url('${backgroundImages[currentImageIndex]}')`,
               backgroundSize: "cover",
-              backgroundPosition: "center",
+              backgroundPosition: "top center",
+              backgroundRepeat: "no-repeat",
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
+          />
+        </AnimatePresence>
+      </div>
+
+      <div className="absolute inset-0 z-0 md:hidden">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={currentImageIndex}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url('${backgroundImages[currentImageIndex]}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "top right",
               backgroundRepeat: "no-repeat",
             }}
             initial={{ opacity: 0 }}
@@ -62,7 +81,7 @@ export default function Hero() {
             href={link.href}
             lineColor="gold"
           >
-            <span className="font-body text-black text-sm md:text-base lg:text-lg tracking-wide">
+            <span className="font-body text-black text-sm md:text-base  tracking-wide">
               {link.name}
             </span>
           </CrossedLink>
