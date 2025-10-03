@@ -61,13 +61,6 @@ export default function Footer() {
 
   return (
     <footer className="relative bg-black text-white overflow-hidden">
-      {/* Large Brand Text Overlay */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <h2 className="font-heading text-[24vw] md:text-[24vw] lg:text-[24rem] tracking-wider text-white/5 leading-none select-none pb-8">
-          HOODSKOOL
-        </h2>
-      </div>
-
       {/* Newsletter Section */}
       <div className="relative z-10 border-b border-white/10">
         <div className=" mx-auto px-6 py-10 md:py-10">

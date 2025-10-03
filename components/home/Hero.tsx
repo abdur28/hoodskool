@@ -27,7 +27,7 @@ export default function Hero() {
       setCurrentImageIndex((prevIndex) => 
         (prevIndex + 1) % backgroundImages.length
       );
-    }, 10000); // Change image every 10 seconds
+    }, 5000); // Change image every 10 seconds
 
     return () => clearInterval(interval);
   }, []);
