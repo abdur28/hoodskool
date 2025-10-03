@@ -8,9 +8,9 @@ const scrollingImages = [
   "/banner/HoodSkool_банер 1 _resized.jpg", 
   "/banner/HoodSkool_банер правка.jpg",
   "/banner/HoodSkool_банер 2 копия_resized.jpg",
-  "/banner/HoodSkool_банер 1 _resized.jpg", 
-  "/banner/HoodSkool_банер правка.jpg",
-  "/banner/HoodSkool_банер 2 копия_resized.jpg",
+  "/HoodSkool_0408202445315 - Copy.jpg", 
+  "/HoodSkool_Catalog_0408202312555 1_resized.jpg",
+  "/HoodSkool_Catalog_0408202313209_resized.jpg",
 ];
 
 // Split images into two rows for mobile

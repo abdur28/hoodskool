@@ -4,49 +4,49 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { WobbleCard } from "@/components/ui/wobble-card";
+import { ArrowRight } from "lucide-react";
 
 interface Category {
   title: string;
-  description: string;
-  image: string;
+  description?: string;
+  image?: string;
   href: string;
   span?: string;
+  bgColor?: string;
 }
 
 const categories: Category[] = [
   {
-    title: "JEANS",
-    description: "Style and comfort meet in our collection of jeans. Discover the latest trends and perfect cuts for an impeccable look.",
-    image: "/categories/jeans.jpg",
-    href: "/clothings/jeans",
-    span: "md:row-span-2"
-  },
-  {
     title: "PROMOTIONS",
     description: "Explore exclusive deals on our top products. The perfect opportunity to enrich your wardrobe with trendy pieces at affordable prices.",
-    image: "/categories/promotions.jpg",
+    image: "/HoodSkool_0408202445315 - Copy.jpg",
+    href: "/clothings/jeans",
+    span: "md:row-span-2",
+  },
+  {
+    title: "HOODIES",
+    description: "Explore exclusive deals on our top products. The perfect opportunity to enrich your wardrobe with trendy pieces at affordable prices.",
+    image: "/banner/HoodSkool_банер правка.jpg",
     href: "/promotions",
-    span: "md:col-span-2"
+    span: "md:col-span-2",
   },
   {
     title: "T-SHIRTS",
-    description: "Passion for fashion and comfort is reflected in every pair of sneakers. Experience style and functionality in a single step.",
-    image: "/categories/tshirts.jpg",
+    image: "/HoodSkool_Catalog_0408202312555 1_resized.jpg",
     href: "/clothings/hood-wears/t-shirts",
   },
   {
-    title: "SHIRTS",
-    description: "Style and comfort meet in our collection of jeans. Discover the latest trends and perfect cuts for an impeccable look.",
-    image: "/categories/shirts.jpg",
-    href: "/clothings/hood-wears/shirts",
-    span: "md:row-span-2"
+    title: "JEANS",
+    image: "/HoodSkool_Catalog_0408202313209_resized.jpg",
+    href: "/accessories/sneakers",
   },
   {
-    title: "SNEAKERS",
-    description: "Passion for fashion and comfort is reflected in every pair of sneakers. Experience style and functionality in a single step.",
-    image: "/categories/sneakers.jpg",
-    href: "/accessories/sneakers",
-    span: "md:col-span-2"
+    title: "SHIRTS",
+    image: "/banner/HoodSkool_банер 1 _resized.jpg",
+    description: "Explore exclusive deals on our top products. The perfect opportunity to enrich your wardrobe with trendy pieces at affordable prices.",
+    href: "/clothings/hood-wears/shirts",
+    span: "md:col-span-2",
   },
 ];
 
@@ -63,7 +63,7 @@ export default function Categories() {
   return (
     <section 
       ref={sectionRef} 
-      className="relative z-20 min-h-screen bg-gray-200 rounded-t-3xl py-10 md:py-10 overflow-hidden"
+      className="relative z-20 min-h-screen bg-gray-200 rounded-t-3xl py-10 md:py-16 overflow-hidden"
     >
       <motion.div style={{ scale }}>
         <div className="max-w-7xl mx-auto px-6">
@@ -75,17 +75,17 @@ export default function Categories() {
             transition={{ duration: 0.6 }}
             className="text-center mb-12 md:mb-16"
           >
-            <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl tracking-wider mb-2">
+            <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl tracking-wider mb-4">
               ELEVATING YOUR STYLE GAME
             </h2>
-            <p className="font-body text-sm md:text-base text-foreground/70 max-w-3xl mx-auto  tracking-wide">
+            <p className="font-body text-sm md:text-base text-foreground/70 max-w-3xl mx-auto tracking-wide">
               Discover the perfect blend of comfort and trend with our exclusive collection. 
               Explore deals on jeans, sneakers, and more!
             </p>
           </motion.div>
 
-          {/* Categories Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6 auto-rows-[280px] md:auto-rows-[320px]">
+          {/* Categories Grid with WobbleCards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-2 auto-rows-[280px] md:auto-rows-[320px]">
             {categories.map((category, index) => (
               <motion.div
                 key={category.title}
@@ -93,58 +93,48 @@ export default function Categories() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className={`group relative overflow-hidden rounded-lg bg-foreground/5 ${category.span || ''}`}
+                className={category.span || ''}
               >
-                <Link href={category.href} className="block w-full h-full">
-                  {/* Image with overlay */}
-                  <div className="relative w-full h-full overflow-hidden">
-                    {/* Placeholder - replace with actual images */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-foreground/10 to-foreground/5 flex items-center justify-center">
-                      <span className="font-heading text-6xl text-foreground/10">
-                        {category.title[0]}
-                      </span>
+                <Link href={category.href} className="block h-full">
+                  <WobbleCard
+                    containerClassName={`h-full  group cursor-pointer`}
+                    className="relative h-full p-6 "
+                  >
+                    {/* Background Image */}
+                    <div className="absolute inset-0 transition-opacity duration-500">
+                      <div className="relative w-full h-full">
+                        {/* Replace with actual image */}
+                        {category.image && <Image
+                          src={category.image}
+                          alt={category.title}
+                          fill
+                          className="w-full h-full object-cover"
+                        />}
+                      </div>
                     </div>
-                    
-                    {/* Dark overlay on hover */}
-                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition-all duration-300" />
-                    
+
                     {/* Content */}
-                    <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end">
-                      <motion.div
-                        initial={false}
-                        whileHover={{ y: -5 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <h3 className="font-heading text-3xl md:text-4xl lg:text-5xl text-white mb-3 tracking-wide">
+                    <div className="relative h-full flex flex-col justify-between">
+                      <div className="flex-1 flex flex-col justify-end">
+                        <h3 className="font-heading text-3xl md:text-4xl lg:text-4xl text-black tracking-wide group-hover:translate-y-[-4px] transition-transform duration-300">
                           {category.title}
                         </h3>
-                        <p className="font-body text-sm md:text-base text-white/90 leading-relaxed line-clamp-3 md:line-clamp-4">
+                        {category.description && <p className="font-body text-xs mt-2 text-black/90 leading-relaxed line-clamp-3 max-w-xs">
                           {category.description}
-                        </p>
-                      </motion.div>
-                      
-                      {/* Hover arrow */}
-                      <motion.div
-                        className="absolute bottom-6 right-6 md:bottom-8 md:right-8 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                          <svg
-                            className="w-5 h-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </div>
-                      </motion.div>
+                        </p>}
+                      </div>
                     </div>
-                  </div>
+
+                    {/* Optional: Add actual category images positioned creatively */}
+                    {index === 4 && (
+                      <div className="absolute -right-10 -bottom-10 w-48 h-48 opacity-60 group-hover:opacity-80 transition-opacity">
+                        <div className="relative w-full h-full">
+                          {/* Replace with actual image */}
+                          <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-sm" />
+                        </div>
+                      </div>
+                    )}
+                  </WobbleCard>
                 </Link>
               </motion.div>
             ))}
