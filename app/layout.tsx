@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bebas_Neue, Inter } from "next/font/google";
 import "./globals.css";
 import ConditionalNavbar from "@/components/navbar/ConditionalNavbar";
+import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -31,8 +32,10 @@ export default function RootLayout({
       <body
         className={`${bebasNeue.variable} ${inter.variable} antialiased`}
       >
-        <ConditionalNavbar />
-        {children}
+        <SmoothScrollProvider>
+          <ConditionalNavbar />
+          {children}
+        </SmoothScrollProvider>
       </body>
     </html>
   );

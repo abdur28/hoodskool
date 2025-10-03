@@ -81,7 +81,7 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'tween', duration: 0.3 }}
-            className="fixed inset-y-3 right-3 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] md:right-4 md:inset-y-4 md:max-w-md bg-background z-50 overflow-hidden rounded-lg shadow-2xl flex flex-col"
+            className="fixed inset-y-3 right-3 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] md:right-4 md:inset-y-4 md:max-w-md bg-background z-50 overflow-hidden rounded-sm shadow-2xl flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-foreground/10">

@@ -73,7 +73,7 @@ export default function MobileSearch({ isOpen, onClose }: MobileSearchProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'tween', duration: 0.3 }}
-            className="fixed inset-y-3 right-3 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] md:right-4 md:inset-y-4 md:max-w-md bg-background z-50 overflow-hidden rounded-lg shadow-2xl flex flex-col"
+            className="fixed inset-y-3 right-3 w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] md:right-4 md:inset-y-4 md:max-w-md bg-background z-50 overflow-hidden rounded-sm shadow-2xl flex flex-col"
           >
             <div className="h-full flex flex-col">
               {/* Header */}
