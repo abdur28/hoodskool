@@ -4,6 +4,7 @@ import "./globals.css";
 import ConditionalNavbar from "@/components/navbar/ConditionalNavbar";
 import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 import Footer from "@/components/footer/Footer";
+import Image from "next/image";
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -35,11 +36,20 @@ export default function RootLayout({
       >
         <SmoothScrollProvider>
           <ConditionalNavbar />
-          {/* <div className="fixed inset-0  z-30 flex items-center justify-center pointer-events-none">
-            <h2 className="font-heading text-[24vw] md:text-[24vw] lg:text-[24rem] tracking-wider text-white/5 leading-none select-none pb-8">
-              HOODSKOOL
-            </h2>
-          </div> */}
+          
+          {/* Skull Watermark */}
+          <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+            <div className="relative w-[60vw] h-[60vw] md:w-[50vw] md:h-[50vw] lg:w-[40vw] lg:h-[40vw] opacity-[2.5%]">
+              <Image
+                src="/skull.svg"
+                alt=""
+                fill
+                className="object-contain select-none"
+                priority
+              />
+            </div>
+          </div>
+
           {children}
           <Footer />
         </SmoothScrollProvider>
