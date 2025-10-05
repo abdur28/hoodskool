@@ -43,6 +43,16 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Custom Skull Cursor */
+* {
+  cursor: url('/skull.svg') 14 14, auto;
+}
+
+/* Different cursor for clickable elements */
+a, button, [role="button"], input[type="submit"], input[type="button"] {
+  cursor: url('/skull.svg') 14 14, pointer;
+}
+
 body {
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
