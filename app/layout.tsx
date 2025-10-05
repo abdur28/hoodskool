@@ -35,11 +35,11 @@ export default function RootLayout({
       >
         <SmoothScrollProvider>
           <ConditionalNavbar />
-            <div className="fixed inset-0  z-30 flex items-center justify-center pointer-events-none">
+          {/* <div className="fixed inset-0  z-30 flex items-center justify-center pointer-events-none">
             <h2 className="font-heading text-[24vw] md:text-[24vw] lg:text-[24rem] tracking-wider text-white/5 leading-none select-none pb-8">
               HOODSKOOL
             </h2>
-          </div>
+          </div> */}
           {children}
           <Footer />
         </SmoothScrollProvider>

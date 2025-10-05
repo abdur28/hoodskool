@@ -27,7 +27,7 @@ export default function Hero() {
       setCurrentImageIndex((prevIndex) => 
         (prevIndex + 1) % backgroundImages.length
       );
-    }, 5000); // Change image every 10 seconds
+    }, 5000);
 
     return () => clearInterval(interval);
   }, []);
@@ -73,18 +73,43 @@ export default function Hero() {
         </AnimatePresence>
       </div>
       
-      {/* Navigation Links - Higher z-index to stay above Info section */}
+      {/* Navigation Links with Drop Animation */}
       <nav className="flex flex-col items-center justify-center gap-3 md:gap-4">
-        {navigationLinks.map((link) => (
-          <CrossedLink
+        {navigationLinks.map((link, index) => (
+          <motion.div
             key={link.name}
-            href={link.href}
-            lineColor="gold"
+            initial={{ 
+              y: -200, 
+              opacity: 0,
+              scale: 0.8
+            }}
+            whileInView={{ 
+              y: 0, 
+              opacity: 1,
+              scale: 1
+            }}
+            viewport={{ once: true }}
+            transition={{
+              type: "spring",
+              damping: 12,
+              stiffness: 100,
+              delay: index * 0.3,
+            }}
+            whileHover={{ 
+              scale: 1.05,
+              transition: { duration: 0.2 }
+            }}
+            whileTap={{ scale: 0.95 }}
           >
-            <span className="font-body text-black text-sm md:text-base  tracking-wide">
-              {link.name}
-            </span>
-          </CrossedLink>
+            <CrossedLink
+              href={link.href}
+              lineColor="gold"
+            >
+              <span className="font-body text-black text-sm md:text-base tracking-wide">
+                {link.name}
+              </span>
+            </CrossedLink>
+          </motion.div>
         ))}
       </nav>
     </section>
