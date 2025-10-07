@@ -57,15 +57,15 @@ body {
   font-family: var(--font-inter), Arial, Helvetica, sans-serif;
 }
 
-/* Heading styles using Bebas Neue */
+/* Heading styles using Slugger Monogram */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-bebas), Arial, Helvetica, sans-serif;
+  font-family: var(--font-slugger-monogram), Arial, Helvetica, sans-serif;
   letter-spacing: 0.02em;
 }
 
 /* Utility classes for easy font usage */
 .font-heading {
-  font-family: var(--font-bebas), Arial, Helvetica, sans-serif;
+  font-family: var(--font-slugger-monogram), Arial, Helvetica, sans-serif;
 }
 
 .font-body {

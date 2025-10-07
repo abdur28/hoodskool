@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import ConditionalNavbar from "@/components/navbar/ConditionalNavbar";
 import SmoothScrollProvider from "@/components/SmoothScrollProvider";
@@ -19,6 +20,12 @@ const inter = Inter({
   display: "swap",
 });
 
+const sluggerMonogram = localFont({
+  src: "./fonts/Slugger-Monogram.otf",
+  variable: "--font-slugger-monogram",
+  display: "swap",
+})
+
 export const metadata: Metadata = {
   title: "Hoodskool - Urban Streetwear",
   description: "Unique streetwear brand for the culture",
@@ -32,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${bebasNeue.variable} ${inter.variable} antialiased`}
+        className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
       >
         <SmoothScrollProvider>
           <ConditionalNavbar />

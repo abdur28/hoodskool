@@ -46,7 +46,7 @@ const categories: Category[] = [
     textColor: "text-white",
   },
   {
-    title: "CANDLES & MATCHES",
+    title: "CANDLES AND MATCHES",
     image: "/DSC09599.jpg",
     description: "Discover our unique range of candles and matches, perfect for adding a touch of elegance to any occasion.",
     href: "/clothings/hood-wears/shirts",

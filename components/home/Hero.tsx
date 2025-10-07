@@ -93,7 +93,7 @@ export default function Hero() {
               type: "spring",
               damping: 12,
               stiffness: 100,
-              delay: index * 0.3,
+              delay: index * 0.5,
             }}
             whileHover={{ 
               scale: 1.05,
