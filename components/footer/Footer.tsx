@@ -6,6 +6,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { Mail, ArrowRight, Instagram, Twitter, Facebook, Youtube } from "lucide-react";
 import CrossedLink from "@/components/ui/crossed-link";
+import { usePathname } from "next/navigation";
 
 const footerLinks = {
   shop: [
@@ -43,6 +44,12 @@ const socialLinks = [
 export default function Footer() {
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  const pathname = usePathname();
+
+  if (pathname.startsWith('/auth')) {
+    return null;
+  }
 
   const handleSubmit = () => {
     if (email && email.includes("@")) {

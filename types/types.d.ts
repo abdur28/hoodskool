@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-// ============ USER & AUTH TYPES ============
+// ============ USER TYPES ============
 
 export type UserRole = 'user' | 'admin';
 export type SignInMethod = 'email' | 'google';
@@ -11,7 +11,7 @@ export interface UserProfile {
   displayName?: string;
   photoURL?: string;
   
-  // Role-based access
+  // Role
   role: UserRole; // 'user' or 'admin'
   
   // Sign-in method
@@ -43,14 +43,19 @@ export interface UserProfile {
   updatedAt: Timestamp;
 }
 
-// Session type for server-side
-export interface SessionUser {
-  uid: string;
-  email: string;
-  displayName?: string;
-  photoURL?: string;
-  role: UserRole;
-  emailVerified: boolean;
+export interface Address {
+  id: string;
+  userId: string;
+  fullName: string;
+  phone: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  isDefault: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 // ============ PRODUCT TYPES ============
@@ -190,27 +195,13 @@ export interface OrderItem {
   imageUrl: string;
 }
 
-export interface Address {
-  id: string;
-  userId: string;
-  fullName: string;
-  phone: string;
-  street: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  country: string;
-  isDefault: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
 export interface Order {
   id: string;
   orderNumber: string;
   userId: string;
   
   deliveryType: DeliveryType;
+  
   items: OrderItem[];
   
   subtotal: number;
@@ -242,6 +233,15 @@ export interface Order {
   shippedAt?: Timestamp;
   deliveredAt?: Timestamp;
   pickedUpAt?: Timestamp;
+}
+
+// ============ WISHLIST TYPES ============
+
+export interface WishlistItem {
+  id: string;
+  userId: string;
+  productId: string;
+  addedAt: Timestamp;
 }
 
 // ============ FILTER & QUERY TYPES ============

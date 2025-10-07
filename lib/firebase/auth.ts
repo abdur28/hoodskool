@@ -24,20 +24,17 @@ export async function signUp(email: string, password: string, displayName?: stri
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
 
-    // Update profile with display name
     if (displayName) {
       await updateProfile(user, { displayName });
     }
 
-    // Send email verification
     await sendEmailVerification(user);
 
-    // Create user profile in Firestore with 'user' role by default
+    // Create user profile with 'user' role by default
     await createUserProfile(user, 'email', 'user');
 
-    // Create session cookie
-    const idToken = await user.getIdToken();
-    await createSession(idToken);
+    // Set auth cookie
+    await setAuthCookie(user);
 
     return { user, error: null };
   } catch (error: any) {
@@ -52,13 +49,11 @@ export async function signUp(email: string, password: string, displayName?: stri
 export async function signIn(email: string, password: string) {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    
+    // Set auth cookie
+    await setAuthCookie(userCredential.user);
 
-    // Create session cookie
-    const idToken = await user.getIdToken();
-    await createSession(idToken);
-
-    return { user, error: null };
+    return { user: userCredential.user, error: null };
   } catch (error: any) {
     console.error('Sign in error:', error);
     return { user: null, error: error.message };
@@ -74,15 +69,14 @@ export async function signInWithGoogle() {
     const userCredential = await signInWithPopup(auth, provider);
     const user = userCredential.user;
 
-    // Check if user profile exists, if not create it
+    // Check if user profile exists
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     if (!userDoc.exists()) {
       await createUserProfile(user, 'google', 'user');
     }
 
-    // Create session cookie
-    const idToken = await user.getIdToken();
-    await createSession(idToken);
+    // Set auth cookie
+    await setAuthCookie(user);
 
     return { user, error: null };
   } catch (error: any) {
@@ -96,12 +90,11 @@ export async function signInWithGoogle() {
  */
 export async function signOut() {
   try {
-    // Sign out from Firebase
     await firebaseSignOut(auth);
     
-    // Clear session cookie
-    await clearSession();
-    
+    // Clear auth cookie
+    await clearAuthCookie();
+
     return { error: null };
   } catch (error: any) {
     console.error('Sign out error:', error);
@@ -142,7 +135,6 @@ export async function updateUserProfile(updates: {
     const user = auth.currentUser;
     if (!user) throw new Error('No user logged in');
 
-    // Update Firebase Auth profile
     if (updates.displayName || updates.photoURL) {
       await updateProfile(user, {
         displayName: updates.displayName,
@@ -150,7 +142,6 @@ export async function updateUserProfile(updates: {
       });
     }
 
-    // Update Firestore profile
     const userRef = doc(db, 'users', user.uid);
     await updateDoc(userRef, {
       ...updates,
@@ -165,19 +156,42 @@ export async function updateUserProfile(updates: {
 }
 
 /**
- * Update user role (admin only)
+ * Update user email
  */
-export async function updateUserRole(userId: string, role: UserRole) {
+export async function updateUserEmail(newEmail: string) {
   try {
-    const userRef = doc(db, 'users', userId);
+    const user = auth.currentUser;
+    if (!user) throw new Error('No user logged in');
+
+    await updateEmail(user, newEmail);
+
+    const userRef = doc(db, 'users', user.uid);
     await updateDoc(userRef, {
-      role,
+      email: newEmail,
       updatedAt: serverTimestamp(),
     });
 
+    await sendEmailVerification(user);
+
     return { error: null };
   } catch (error: any) {
-    console.error('Update role error:', error);
+    console.error('Update email error:', error);
+    return { error: error.message };
+  }
+}
+
+/**
+ * Update user password
+ */
+export async function updateUserPassword(newPassword: string) {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No user logged in');
+
+    await updatePassword(user, newPassword);
+    return { error: null };
+  } catch (error: any) {
+    console.error('Update password error:', error);
     return { error: error.message };
   }
 }
@@ -196,6 +210,8 @@ async function createUserProfile(
   } = {
     uid: user.uid,
     email: user.email!,
+    ...(user.displayName ? { displayName: user.displayName } : {}),
+    ...(user.photoURL ? { photoURL: user.photoURL } : {}),
     displayName: user.displayName || undefined,
     photoURL: user.photoURL || undefined,
     role, // Default to 'user'
@@ -228,32 +244,32 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 }
 
 /**
- * Create session cookie (call API route)
+ * Set auth cookie (calls API route)
  */
-async function createSession(idToken: string) {
+async function setAuthCookie(user: User) {
   try {
+    const idToken = await user.getIdToken();
+    
     await fetch('/api/auth/session', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
     });
   } catch (error) {
-    console.error('Create session error:', error);
+    console.error('Set auth cookie error:', error);
   }
 }
 
 /**
- * Clear session cookie (call API route)
+ * Clear auth cookie (calls API route)
  */
-async function clearSession() {
+async function clearAuthCookie() {
   try {
     await fetch('/api/auth/session', {
       method: 'DELETE',
     });
   } catch (error) {
-    console.error('Clear session error:', error);
+    console.error('Clear auth cookie error:', error);
   }
 }
 

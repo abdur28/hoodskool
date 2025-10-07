@@ -6,6 +6,10 @@ import HomeNavbar from './HomeNavbar';
 
 const ConditionalNavbar = () => {
   const pathname = usePathname();
+
+  if (pathname.startsWith('/auth')) {
+    return null;
+  }
   
   // Use HomeNavbar for the homepage, regular Navbar for all other pages
   if (pathname === '/') {
