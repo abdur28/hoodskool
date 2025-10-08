@@ -75,7 +75,7 @@ export default function SettingsPage() {
     const result = await updateProfile({ displayName });
     if (result.success) {
       toast.success('Profile updated successfully!');
-      await refetch();
+      await refetch(user!);
     } else {
       toast.error(result.error || 'Failed to update profile');
     }
@@ -93,7 +93,7 @@ export default function SettingsPage() {
     
     if (result.success) {
       toast.success('Address updated successfully!');
-      await refetch();
+      await refetch(user!);
     } else {
       toast.error(result.error || 'Failed to update address');
     }

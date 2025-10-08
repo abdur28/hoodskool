@@ -64,7 +64,7 @@ const navigationStructure: NavigationItem[] = [
 ];
 
 const accountLinks = [
-  { name: 'My Account', href: '/account', icon: User },
+  { name: 'My Dashboard', href: '/dashboard', icon: User },
   { name: 'My Orders', href: '/orders', icon: Package },
   { name: 'Frequently asked questions', href: '/faq', icon: HelpCircle },
 ];

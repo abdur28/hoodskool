@@ -65,9 +65,8 @@ export default function SignupPage() {
         setError(error);
       } else {
         setSuccess(true);
-        await refetch();
         setTimeout( async () => {
-          await refetch();
+          await refetch(user!);
           router.push(redirect);
           router.refresh();
         }, 2000);
@@ -89,7 +88,7 @@ export default function SignupPage() {
       if (error) {
         setError(error);
       } else {
-        await refetch();
+        await refetch(user!);
         router.push(redirect);
         router.refresh();
       }

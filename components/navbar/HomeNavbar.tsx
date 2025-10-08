@@ -126,9 +126,9 @@ export default function HomeNavbar() {
                 <Search className="h-5 w-5" />
               </button>
               <Link
-                href="/profile"
+                href="/dashboard"
                 className="p-2 hover:bg-foreground/5 rounded-md transition-colors"
-                aria-label="Profile"
+                aria-label="dashboard"
               >
                 <User className="h-5 w-5" />
               </Link>

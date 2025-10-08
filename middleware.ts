@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 const COOKIE_NAME = 'auth-token';
 
 // Routes that require authentication
-const PROTECTED_ROUTES = ['/profile', '/orders', '/admin'];
+const PROTECTED_ROUTES = ['/dashboard', '/orders', '/admin'];
 
 /**
  * Lightweight middleware - only checks if auth cookie exists

@@ -5,7 +5,7 @@ import { UserRole } from '@/types/types';
 
 const COOKIE_NAME = 'auth-token';
 
-interface AuthUser {
+export interface AuthUser {
   uid: string;
   email: string | undefined;
   role: UserRole;
@@ -42,11 +42,11 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
  * Require authentication in Server Component
  * Redirects to login if not authenticated
  */
-export async function requireAuth(): Promise<AuthUser> {
+export async function requireAuth(redirectUrl?: string): Promise<AuthUser> {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect('/auth/login');
+    redirect(`/auth/login${redirectUrl ? `?redirect=${redirectUrl}` : ''}`);
   }
 
   return user;

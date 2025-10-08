@@ -59,7 +59,7 @@ export default function PreferencesPage() {
     
     if (result.success) {
       toast.success('Preferences saved successfully!');
-      await refetch();
+      await refetch(user);
     } else {
       toast.error('Failed to save preferences. Please try again.');
     }

@@ -50,7 +50,7 @@ export default function LoginPage() {
       if (error) {
         setError(error);
       } else {
-        await refetch();
+        await refetch(user!);
         router.push(redirect);
         router.refresh();
       }
@@ -71,7 +71,7 @@ export default function LoginPage() {
       if (error) {
         setError(error);
       } else {
-        await refetch();
+        await refetch(user!);
         router.push(redirect);
         router.refresh();
       }

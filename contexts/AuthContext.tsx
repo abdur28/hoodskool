@@ -11,7 +11,7 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
-  refetch: () => Promise<void>;
+  refetch: (user: User) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { loadWishlist, clearWishlist, loadPreferences, clearPreferences } = useDashboard();
 
   // Refetch user profile
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (user: User) => {
     if (user) {
       const userProfile = await getUserProfile(user.uid);
       setProfile(userProfile);
