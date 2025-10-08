@@ -7,12 +7,16 @@ import MobileMenu from '@/components/navbar/MobileMenu';
 import MobileSearch from '@/components/navbar/MobileSearch';
 import DesktopNavigation from '@/components/navbar/DesktopNavigation';
 import CartSheet from '@/components/cart/CartSheet';
+import { useCartCount } from '@/hooks/useCart';
 
 export default function HomeNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  // Get cart count from the cart store
+  const cartCount = useCartCount();
 
   useEffect(() => {
     const checkScrollPosition = () => {
@@ -85,7 +89,7 @@ export default function HomeNavbar() {
             </div>
 
             {/* Desktop Logo */}
-            <div className="flex items-center md:block hidden">
+            <div className="items-center md:flex hidden">
               <Link href="/" className="flex items-center">
                 <Image
                   src="/hoodskool-logo.png"
@@ -134,9 +138,18 @@ export default function HomeNavbar() {
                 aria-label="Shopping cart"
               >
                 <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 text-xs w-5 h-5 rounded-full flex items-center justify-center bg-foreground text-background">
-                  2
-                </span>
+                <AnimatePresence>
+                  {cartCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1 -right-1 text-xs w-5 h-5 rounded-full flex items-center justify-center bg-foreground text-background font-semibold"
+                    >
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             </div>
           </div>

@@ -1,66 +1,42 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
-import CrossedLink from '@/components/ui/crossed-link';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  size?: string;
-  color?: string;
-}
+import { useCart } from '@/hooks/useCart';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CartSheetProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-// Mock cart data - replace with your actual cart state
-const mockCartItems: CartItem[] = [
-  {
-    id: '1',
-    name: 'Black Hoodie',
-    price: 75.00,
-    quantity: 1,
-    image: '/placeholder-product.jpg',
-    size: 'L',
-    color: 'Black',
-  },
-  {
-    id: '2',
-    name: 'Bucket Hat',
-    price: 35.00,
-    quantity: 2,
-    image: '/placeholder-product.jpg',
-    color: 'Navy',
-  },
-];
-
 export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
-  const [cartItems, setCartItems] = useState<CartItem[]>(mockCartItems);
+  const { user } = useAuth();
+  const {
+    items,
+    itemCount,
+    subtotal,
+    tax,
+    shipping,
+    total,
+    isLoading,
+    updateQuantity,
+    removeItem,
+  } = useCart();
 
-  const updateQuantity = (id: string, change: number) => {
-    setCartItems(items =>
-      items.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity + change) }
-          : item
-      )
-    );
+  // Format price
+  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
+
+  // Handle quantity change
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    await updateQuantity(itemId, newQuantity, user?.uid);
   };
 
-  const removeItem = (id: string) => {
-    setCartItems(items => items.filter(item => item.id !== id));
+  // Handle remove item
+  const handleRemoveItem = async (itemId: string) => {
+    await removeItem(itemId, user?.uid);
   };
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shipping = subtotal > 100 ? 0 : 10;
-  const total = subtotal + shipping;
 
   return (
     <AnimatePresence>
@@ -88,7 +64,7 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
               <div className="flex items-center gap-2">
                 <ShoppingBag className="h-5 w-5" />
                 <h2 className="font-heading text-lg tracking-wider">
-                  CART ({cartItems.length})
+                  CART ({itemCount})
                 </h2>
               </div>
               
@@ -103,7 +79,7 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
 
             {/* Cart Items */}
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              {cartItems.length === 0 ? (
+              {items.length === 0 ? (
                 // Empty State
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <ShoppingBag className="h-16 w-16 text-foreground/20 mb-4" />
@@ -113,6 +89,7 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                   </p>
                   <Link
                     href="/clothings"
+                    onClick={onClose}
                     className="inline-block px-6 py-3 bg-foreground text-background hover:bg-foreground/90 transition-colors rounded-md font-body text-sm"
                   >
                     Start Shopping
@@ -121,7 +98,7 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
               ) : (
                 // Cart Items List
                 <div className="space-y-6">
-                  {cartItems.map((item) => (
+                  {items.map((item) => (
                     <motion.div
                       key={item.id}
                       layout
@@ -131,29 +108,50 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                       className="flex gap-4 pb-6 border-b border-foreground/10 last:border-0"
                     >
                       {/* Product Image */}
-                      <div className="relative w-24 h-24 bg-foreground/5 rounded-md overflow-hidden flex-shrink-0">
-                        <div className="w-full h-full flex items-center justify-center text-foreground/20 text-xs">
-                          IMAGE
-                        </div>
-                      </div>
+                      <Link
+                        href={`/product/${item.slug}`}
+                        onClick={onClose}
+                        className="relative w-24 h-24 bg-foreground/5 rounded-md overflow-hidden flex-shrink-0 hover:opacity-80 transition-opacity"
+                      >
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-foreground/20 text-xs">
+                            No Image
+                          </div>
+                        )}
+                      </Link>
 
                       {/* Product Details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-body font-medium text-sm mb-1 truncate">
+                            <Link
+                              href={`/product/${item.slug}`}
+                              onClick={onClose}
+                              className="font-body font-medium text-sm mb-1 hover:text-foreground/60 transition-colors line-clamp-2"
+                            >
                               {item.name}
-                            </h3>
+                            </Link>
                             {item.size && (
                               <p className="text-xs text-foreground/60">Size: {item.size}</p>
                             )}
                             {item.color && (
                               <p className="text-xs text-foreground/60">Color: {item.color}</p>
                             )}
+                            {!item.inStock && (
+                              <p className="text-xs text-red-500 mt-1">Out of stock</p>
+                            )}
                           </div>
                           <button
-                            onClick={() => removeItem(item.id)}
-                            className="p-1 hover:bg-foreground/5 rounded transition-colors ml-2"
+                            onClick={() => handleRemoveItem(item.id)}
+                            disabled={isLoading}
+                            className="p-1 hover:bg-foreground/5 rounded transition-colors ml-2 disabled:opacity-50"
                             aria-label="Remove item"
                           >
                             <Trash2 className="h-4 w-4 text-foreground/60" />
@@ -164,8 +162,9 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                         <div className="flex items-center justify-between mt-3">
                           <div className="flex items-center gap-2 border border-foreground/20 rounded-md">
                             <button
-                              onClick={() => updateQuantity(item.id, -1)}
-                              className="p-2 hover:bg-foreground/5 transition-colors"
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                              disabled={isLoading || item.quantity <= 1}
+                              className="p-2 hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Decrease quantity"
                             >
                               <Minus className="h-3 w-3" />
@@ -174,17 +173,25 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                               {item.quantity}
                             </span>
                             <button
-                              onClick={() => updateQuantity(item.id, 1)}
-                              className="p-2 hover:bg-foreground/5 transition-colors"
+                              onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                              disabled={isLoading || item.quantity >= item.maxQuantity}
+                              className="p-2 hover:bg-foreground/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Increase quantity"
                             >
                               <Plus className="h-3 w-3" />
                             </button>
                           </div>
                           <span className="font-body font-semibold text-sm">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            {formatPrice(item.price * item.quantity)}
                           </span>
                         </div>
+                        
+                        {/* Max quantity warning */}
+                        {item.quantity >= item.maxQuantity && (
+                          <p className="text-xs text-orange-500 mt-1">
+                            Max quantity reached
+                          </p>
+                        )}
                       </div>
                     </motion.div>
                   ))}
@@ -193,28 +200,36 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
             </div>
 
             {/* Footer - Totals and Checkout */}
-            {cartItems.length > 0 && (
+            {items.length > 0 && (
               <div className="border-t border-foreground/10 bg-background">
-                {/* Subtotal and Shipping */}
+                {/* Totals */}
                 <div className="px-6 py-4 space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-foreground/60">Subtotal</span>
-                    <span className="font-body font-medium">${subtotal.toFixed(2)}</span>
+                    <span className="font-body font-medium">{formatPrice(subtotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-foreground/60">Tax (8%)</span>
+                    <span className="font-body font-medium">{formatPrice(tax)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-foreground/60">Shipping</span>
                     <span className="font-body font-medium">
-                      {shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? (
+                        <span className="text-green-600">Free</span>
+                      ) : (
+                        formatPrice(shipping)
+                      )}
                     </span>
                   </div>
-                  {subtotal < 100 && (
+                  {subtotal < 100 && shipping > 0 && (
                     <p className="text-xs text-foreground/60 pt-1">
-                      Free shipping on orders over $100
+                      Add {formatPrice(100 - subtotal)} more for free shipping
                     </p>
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-foreground/10">
                     <span className="font-heading text-base">TOTAL</span>
-                    <span className="font-heading text-lg">${total.toFixed(2)}</span>
+                    <span className="font-heading text-lg">{formatPrice(total)}</span>
                   </div>
                 </div>
 
@@ -235,6 +250,17 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                     Continue Shopping
                   </Link>
                 </div>
+              </div>
+            )}
+
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-8 h-8 border-2 border-foreground border-t-transparent rounded-full"
+                />
               </div>
             )}
           </motion.div>

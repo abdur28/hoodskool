@@ -6,11 +6,16 @@ import MobileMenu from '@/components/navbar/MobileMenu';
 import MobileSearch from '@/components/navbar/MobileSearch';
 import DesktopNavigation from '@/components/navbar/DesktopNavigation';
 import CartSheet from '@/components/cart/CartSheet';
+import { useCartCount } from '@/hooks/useCart';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+  // Get cart count from the cart store
+  const cartCount = useCartCount();
 
   return (
     <>
@@ -78,9 +83,18 @@ export default function Navbar() {
                 aria-label="Shopping cart"
               >
                 <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 bg-foreground text-background text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                  2
-                </span>
+                <AnimatePresence>
+                  {cartCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1 -right-1 text-xs w-5 h-5 rounded-full flex items-center justify-center bg-foreground text-background font-semibold"
+                    >
+                      {cartCount > 99 ? '99+' : cartCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </button>
             </div>
           </div>

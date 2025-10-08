@@ -6,6 +6,9 @@ import ConditionalNavbar from "@/components/navbar/ConditionalNavbar";
 import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 import Footer from "@/components/footer/Footer";
 import Image from "next/image";
+import { AuthProvider } from "@/contexts/AuthContext";
+import CartInitializerContext from "@/contexts/CartInitializerContext";
+
 
 const bebasNeue = Bebas_Neue({
   weight: "400",
@@ -41,25 +44,28 @@ export default function RootLayout({
       <body
         className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
       >
-        <SmoothScrollProvider>
-          <ConditionalNavbar />
-          
-          {/* Skull Watermark */}
-          <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
-            <div className="relative w-[60vw] h-[60vw] md:w-[50vw] md:h-[50vw] lg:w-[40vw] lg:h-[40vw] opacity-[2.5%]">
-              <Image
-                src="/skull.svg"
-                alt=""
-                fill
-                className="object-contain select-none"
-                priority
-              />
+        <AuthProvider>
+          <CartInitializerContext />
+          <SmoothScrollProvider>
+            <ConditionalNavbar />
+            
+            {/* Skull Watermark */}
+            <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <div className="relative w-[60vw] h-[60vw] md:w-[50vw] md:h-[50vw] lg:w-[40vw] lg:h-[40vw] opacity-[2.5%]">
+                <Image
+                  src="/skull.svg"
+                  alt=""
+                  fill
+                  className="object-contain select-none"
+                  priority
+                />
+              </div>
             </div>
-          </div>
 
-          {children}
-          <Footer />
-        </SmoothScrollProvider>
+            {children}
+            <Footer />
+          </SmoothScrollProvider>
+        </AuthProvider>
       </body>
     </html>
   );

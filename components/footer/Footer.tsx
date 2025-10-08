@@ -47,7 +47,7 @@ export default function Footer() {
   
   const pathname = usePathname();
 
-  if (pathname.startsWith('/auth')) {
+  if (pathname.startsWith('/auth') || pathname.startsWith('/dashboard')) {
     return null;
   }
 
