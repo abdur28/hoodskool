@@ -11,10 +11,11 @@ import {
   signInWithPopup,
   sendEmailVerification,
   onAuthStateChanged,
+  deleteUser as firebaseDeleteUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { auth, db } from './config';
-import { UserProfile, UserRole } from '@/types/types';
+import { UserPreferences, UserProfile, UserRole } from '@/types/types';
 
 /**
  * Sign up with email and password
@@ -102,6 +103,25 @@ export async function signOut() {
   }
 }
 
+export async function deleteUser() {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No user logged in');
+
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    if (userDoc.exists()) {
+      await deleteDoc(doc(db, 'users', user.uid));
+    }
+
+    await firebaseDeleteUser(user);
+
+    return { error: null };
+  } catch (error: any) {
+    console.error('Delete user error:', error);
+    return { error: error.message };
+  }
+}
+
 /**
  * Send password reset email
  */
@@ -130,6 +150,7 @@ export async function updateUserProfile(updates: {
     zipCode: string;
     country: string;
   };
+  preferences?: UserPreferences;
 }) {
   try {
     const user = auth.currentUser;
@@ -213,9 +234,19 @@ async function createUserProfile(
     ...(user.displayName ? { displayName: user.displayName } : {}),
     ...(user.photoURL ? { photoURL: user.photoURL } : {}),
     displayName: user.displayName || undefined,
-    photoURL: user.photoURL || undefined,
+    ...(user.photoURL ? { photoURL: user.photoURL } : {}),
     role, // Default to 'user'
     signInMethod,
+    preferences: {
+      currency: 'rub',
+      emailNotifications: {
+        orderUpdates: true,
+        promotions: true,
+        newArrivals: true,
+        wishlistAlerts: true,
+        newsletter: true,
+      }
+    },
     emailVerified: user.emailVerified,
     orders: [],
     wishlistItems: [],

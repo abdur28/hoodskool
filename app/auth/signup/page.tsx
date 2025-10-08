@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signUp, signInWithGoogle } from '@/lib/firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Mail, Lock, User, Chrome, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import CrossedLink from '@/components/ui/crossed-link';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 
 const backgroundImages = [
   '/banner/HoodSkool_банер 1 _resized.jpg',
@@ -27,6 +28,9 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect') || '/dashboard';
+  const { refetch } = useAuth();
 
   // Cycle background images
   useState(() => {
@@ -61,8 +65,10 @@ export default function SignupPage() {
         setError(error);
       } else {
         setSuccess(true);
-        setTimeout(() => {
-          router.push('/profile');
+        await refetch();
+        setTimeout( async () => {
+          await refetch();
+          router.push(redirect);
           router.refresh();
         }, 2000);
       }
@@ -83,7 +89,8 @@ export default function SignupPage() {
       if (error) {
         setError(error);
       } else {
-        router.push('/profile');
+        await refetch();
+        router.push(redirect);
         router.refresh();
       }
     } catch (err) {
@@ -315,7 +322,7 @@ export default function SignupPage() {
           {/* Login Link */}
           <div className="mt-6 text-center text-sm text-white/60">
             Already have an account?{' '}
-            <CrossedLink href="/auth/login" lineColor="#F8E231" lineWidth={1}>
+            <CrossedLink href={`/auth/login?redirect=${redirect}`} lineColor="#F8E231" lineWidth={1}>
               <span className="text-[#F8E231] font-medium">Login</span>
             </CrossedLink>
           </div>

@@ -14,6 +14,7 @@ import {
   User
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 
 const navigationItems = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -30,7 +31,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { signOut } = useAuth();
+  const { signOut, user, profile } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
@@ -90,12 +91,20 @@ export default function DashboardLayout({
             className="mb-6 pb-6 border-b border-foreground/10"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-foreground/5 flex items-center justify-center">
-                <User className="h-6 w-6 text-foreground/60" />
+              <div className="w-10 h-10 bg-foreground/5 rounded-full flex items-center justify-center">
+                {profile?.photoURL ? 
+                <Image
+                  src={profile.photoURL}
+                  alt="User"
+                  width={48}
+                  height={48}
+                  className="rounded-full object-cover overflow-hidden"
+                /> 
+                : <User className="h-5 w-5 text-foreground/60" />}
               </div>
               <div>
-                <h3 className="font-body font-semibold text-sm">John Doe</h3>
-                <p className="font-body text-xs text-foreground/60">john@example.com</p>
+                <h3 className="font-body font-semibold text-sm">{profile?.displayName || 'User'}</h3>
+                <p className="font-body text-xs text-foreground/60">{profile?.email}</p>
               </div>
             </div>
           </motion.div>

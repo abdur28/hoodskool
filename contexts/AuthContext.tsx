@@ -1,17 +1,17 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User } from 'firebase/auth';
-import { onAuthChange, getUserProfile } from '@/lib/firebase/auth';
+import { onAuthChange, getUserProfile, signOut as firebaseSignOut } from '@/lib/firebase/auth';
 import { UserProfile } from '@/types/types';
-import { auth } from '@/lib/firebase/config';
-import { redirect } from 'next/navigation';
+import { useDashboard } from '@/hooks/useDashboard';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
+  refetch: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -20,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   isAdmin: false,
+  refetch: async () => {},
   signOut: async () => {},
 });
 
@@ -27,6 +28,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Access dashboard store
+  const { loadWishlist, clearWishlist, loadPreferences, clearPreferences } = useDashboard();
+
+  // Refetch user profile
+  const refetch = useCallback(async () => {
+    if (user) {
+      const userProfile = await getUserProfile(user.uid);
+      setProfile(userProfile);
+      
+      // Reload wishlist and preferences
+      await loadWishlist(user.uid);
+      await loadPreferences(user.uid);
+    }
+  }, [user, loadWishlist, loadPreferences]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user) => {
@@ -36,27 +52,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Fetch user profile from Firestore
         const userProfile = await getUserProfile(user.uid);
         setProfile(userProfile);
+        
+        // Load user's wishlist and preferences
+        await loadWishlist(user.uid);
+        await loadPreferences(user.uid);
       } else {
         setProfile(null);
+        clearWishlist();
+        clearPreferences();
       }
 
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [loadWishlist, clearWishlist, loadPreferences, clearPreferences]);
 
   const isAdmin = profile?.role === 'admin';
 
   const signOut = async () => {
-    await auth.signOut();
-    setUser(null);
-    setProfile(null);
-    redirect('/');
+    try {
+      // Sign out from Firebase (this also calls clearAuthCookie internally)
+      await firebaseSignOut();
+      
+      // Clear local state
+      setUser(null);
+      setProfile(null);
+      
+      // Clear wishlist and preferences
+      clearWishlist();
+      clearPreferences();
+      
+      // Redirect to home
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, isAdmin, refetch, signOut }}>
       {children}
     </AuthContext.Provider>
   );

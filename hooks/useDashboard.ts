@@ -4,13 +4,25 @@ import {
   removeFromWishlist as removeFromWishlistFirebase,
   getWishlist as getWishlistFirebase
 } from '@/lib/products';
-import type { Product } from '@/types/types';
+import { updateUserProfile, getUserProfile, updateUserEmail, updateUserPassword } from '@/lib/firebase/auth';
+import type { Product, UserPreferences } from '@/types/types';
+
 
 interface DashboardState {
   // Wishlist state
-  wishlist: string[]; // Array of product IDs
+  wishlist: string[];
   wishlistProducts: Product[];
   isLoadingWishlist: boolean;
+
+  // Preferences state
+  preferences: UserPreferences | null;
+  isLoadingPreferences: boolean;
+  isSavingPreferences: boolean;
+
+  // Settings state
+  isSavingProfile: boolean;
+  isSavingAddress: boolean;
+  isUpdatingPassword: boolean;
 
   // Wishlist actions
   loadWishlist: (userId: string) => Promise<void>;
@@ -18,19 +30,126 @@ interface DashboardState {
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => void;
 
-  // Future: Can add more dashboard features here
-  // - Order history
-  // - User preferences
-  // - etc.
+  // Preferences actions
+  loadPreferences: (userId: string) => Promise<void>;
+  savePreferences: (userId: string, preferences: UserPreferences) => Promise<{ success: boolean; error?: string }>;
+  updatePreferencesLocally: (preferences: Partial<UserPreferences>) => void;
+  clearPreferences: () => void;
+
+  // Settings actions
+  updateProfile: (data: { displayName?: string; phone?: string }) => Promise<{ success: boolean; error?: string }>;
+  updateAddress: (address: any) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  changeEmail: (newEmail: string) => Promise<{ success: boolean; error?: string }>;
 }
+
+const defaultPreferences: UserPreferences = {
+  emailNotifications: {
+    orderUpdates: true,
+    promotions: true,
+    newArrivals: false,
+    wishlistAlerts: true,
+    newsletter: true,
+  },
+  currency: 'rub',
+};
 
 export const useDashboard = create<DashboardState>((set, get) => ({
   // Initial state
   wishlist: [],
   wishlistProducts: [],
   isLoadingWishlist: false,
+  preferences: null,
+  isLoadingPreferences: false,
+  isSavingPreferences: false,
+  isSavingProfile: false,
+  isSavingAddress: false,
+  isUpdatingPassword: false,
 
-  // Load user's wishlist from Firebase
+  // ... (keep all existing wishlist and preferences functions)
+
+  // Update user profile
+  updateProfile: async (data: { displayName?: string; phone?: string }) => {
+    set({ isSavingProfile: true });
+    
+    try {
+      const { error } = await updateUserProfile(data);
+      
+      if (error) {
+        set({ isSavingProfile: false });
+        return { success: false, error };
+      }
+
+      set({ isSavingProfile: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isSavingProfile: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Update shipping address
+  updateAddress: async (address: any) => {
+    set({ isSavingAddress: true });
+    
+    try {
+      const { error } = await updateUserProfile({ address });
+      
+      if (error) {
+        set({ isSavingAddress: false });
+        return { success: false, error };
+      }
+
+      set({ isSavingAddress: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isSavingAddress: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Change password
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    set({ isUpdatingPassword: true });
+    
+    try {
+      // You'll need to implement this in your auth file
+      const { error } = await updateUserPassword(newPassword);
+      
+      if (error) {
+        set({ isUpdatingPassword: false });
+        return { success: false, error };
+      }
+
+      set({ isUpdatingPassword: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isUpdatingPassword: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Change email
+  changeEmail: async (newEmail: string) => {
+    set({ isSavingProfile: true });
+    
+    try {
+      const { error } = await updateUserEmail(newEmail);
+      
+      if (error) {
+        set({ isSavingProfile: false });
+        return { success: false, error };
+      }
+
+      set({ isSavingProfile: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isSavingProfile: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Keep all existing functions (loadWishlist, toggleWishlist, etc.)
   loadWishlist: async (userId: string) => {
     set({ isLoadingWishlist: true });
     
@@ -56,12 +175,10 @@ export const useDashboard = create<DashboardState>((set, get) => ({
     }
   },
 
-  // Toggle product in wishlist
   toggleWishlist: async (productId: string, userId: string) => {
     const { wishlist } = get();
     const isCurrentlyInWishlist = wishlist.includes(productId);
 
-    // Optimistically update UI
     if (isCurrentlyInWishlist) {
       set({ 
         wishlist: wishlist.filter(id => id !== productId),
@@ -75,48 +192,37 @@ export const useDashboard = create<DashboardState>((set, get) => ({
 
     try {
       if (isCurrentlyInWishlist) {
-        // Remove from wishlist
         const { error } = await removeFromWishlistFirebase(userId, productId);
         
         if (error) {
-          // Revert on error
-          set({ 
-            wishlist: [...wishlist, productId] 
-          });
+          set({ wishlist: [...wishlist, productId] });
           console.error('Failed to remove from wishlist:', error);
           return false;
         }
         
-        return false; // Now not in wishlist
+        return false;
       } else {
-        // Add to wishlist
         const { error } = await addToWishlistFirebase(userId, productId);
         
         if (error) {
-          // Revert on error
-          set({ 
-            wishlist: wishlist.filter(id => id !== productId) 
-          });
+          set({ wishlist: wishlist.filter(id => id !== productId) });
           console.error('Failed to add to wishlist:', error);
           return false;
         }
         
-        return true; // Now in wishlist
+        return true;
       }
     } catch (error) {
       console.error('Toggle wishlist error:', error);
-      // Revert to original state
       set({ wishlist });
       return isCurrentlyInWishlist;
     }
   },
 
-  // Check if product is in wishlist
   isInWishlist: (productId: string) => {
     return get().wishlist.includes(productId);
   },
 
-  // Clear wishlist (e.g., on logout)
   clearWishlist: () => {
     set({ 
       wishlist: [],
@@ -124,14 +230,91 @@ export const useDashboard = create<DashboardState>((set, get) => ({
       isLoadingWishlist: false 
     });
   },
+
+  loadPreferences: async (userId: string) => {
+    set({ isLoadingPreferences: true });
+    
+    try {
+      const userProfile = await getUserProfile(userId);
+      
+      if (userProfile?.preferences) {
+        set({ 
+          preferences: userProfile.preferences as UserPreferences,
+          isLoadingPreferences: false 
+        });
+      } else {
+        set({ 
+          preferences: defaultPreferences,
+          isLoadingPreferences: false 
+        });
+      }
+    } catch (error) {
+      console.error('Load preferences error:', error);
+      set({ 
+        preferences: defaultPreferences,
+        isLoadingPreferences: false 
+      });
+    }
+  },
+
+  savePreferences: async (userId: string, preferences: UserPreferences) => {
+    set({ isSavingPreferences: true });
+    
+    try {
+      const { error } = await updateUserProfile({
+        preferences,
+      });
+      
+      if (error) {
+        console.error('Failed to save preferences:', error);
+        set({ isSavingPreferences: false });
+        return { success: false, error };
+      }
+
+      set({ 
+        preferences,
+        isSavingPreferences: false 
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Save preferences error:', error);
+      set({ isSavingPreferences: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  updatePreferencesLocally: (partialPreferences: Partial<UserPreferences>) => {
+    const { preferences } = get();
+    if (preferences) {
+      set({ 
+        preferences: { ...preferences, ...partialPreferences } 
+      });
+    }
+  },
+
+  clearPreferences: () => {
+    set({ 
+      preferences: null,
+      isLoadingPreferences: false,
+      isSavingPreferences: false
+    });
+  },
 }));
 
-// Helper hook to check if specific product is in wishlist
+// Helper hooks
 export const useIsInWishlist = (productId: string) => {
   return useDashboard(state => state.isInWishlist(productId));
 };
 
-// Helper hook to get wishlist count
 export const useWishlistCount = () => {
   return useDashboard(state => state.wishlist.length);
+};
+
+export const usePreferences = () => {
+  return useDashboard(state => state.preferences);
+};
+
+export const useCurrency = () => {
+  return useDashboard(state => state.preferences?.currency || 'rub');
 };

@@ -4,9 +4,11 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import Image from "next/image";
 import { Heart, ShoppingBag, Check } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import CrossedLink from "@/components/ui/crossed-link";
 import { useCart, useIsInCart } from "@/hooks/useCart";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboard, useIsInWishlist } from "@/hooks/useDashboard";
 import type { CartItem, Product } from "@/types/types";
 import { Skeleton } from "./ui/skeleton";
 
@@ -17,20 +19,44 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
   
+  const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuth();
   const addItem = useCart(state => state.addItem);
   const isInCart = useIsInCart(product.id);
+  
+  // Wishlist functionality
+  const toggleWishlist = useDashboard(state => state.toggleWishlist);
+  const isLiked = useIsInWishlist(product.id);
 
   const discountedPrice = product.discountPercent 
     ? product.price - (product.price * product.discountPercent / 100)
     : product.price;
 
-  const toggleLike = () => {
-    setIsLiked(!isLiked);
-    // TODO: Add to wishlist
+  const handleToggleLike = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Check if user is logged in
+    if (!user) {
+      // Redirect to login with return URL
+      router.push(`/auth/login?redirect=${pathname}`);
+      return;
+    }
+
+    setIsTogglingWishlist(true);
+
+    try {
+      await toggleWishlist(product.id, user.uid);
+    } catch (error) {
+      console.error('Failed to toggle wishlist:', error);
+    } finally {
+      // Small delay for visual feedback
+      setTimeout(() => setIsTogglingWishlist(false), 300);
+    }
   };
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -163,7 +189,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Wishlist Heart */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: isHovered ? 1 : 0 }}
@@ -171,14 +197,15 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           className="absolute top-3 right-3 flex flex-col gap-2 z-20"
         >
           <motion.button
-            onClick={toggleLike}
+            onClick={handleToggleLike}
+            disabled={isTogglingWishlist}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className={`p-2 rounded-full transition-all shadow-lg ${
               isLiked 
                 ? 'bg-[#F8E231] text-black' 
                 : 'bg-white text-black hover:bg-[#F8E231]'
-            }`}
+            } ${isTogglingWishlist ? 'opacity-50 cursor-wait' : ''}`}
           >
             <Heart 
               className={`h-4 w-4 transition-all ${
@@ -295,10 +322,9 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
 export const ProductCardSkeleton = () => {
   return (
     <div className="group relative mb-4 md:mb-8">
-      <Skeleton className="relative aspect-[2/3]  rounded-xs mb-4"
-      />
+      <Skeleton className="relative aspect-[2/3] rounded-xs mb-4" />
       <Skeleton className="h-3 w-1/2 mb-1" />
       <Skeleton className="h-3 w-1/3" />
     </div>
   );
-}
+};

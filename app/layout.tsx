@@ -8,6 +8,7 @@ import Footer from "@/components/footer/Footer";
 import Image from "next/image";
 import { AuthProvider } from "@/contexts/AuthContext";
 import CartInitializerContext from "@/contexts/CartInitializerContext";
+import { Toaster } from 'sonner'
 
 
 const bebasNeue = Bebas_Neue({
@@ -63,6 +64,7 @@ export default function RootLayout({
             </div>
 
             {children}
+            <Toaster richColors/>
             <Footer />
           </SmoothScrollProvider>
         </AuthProvider>

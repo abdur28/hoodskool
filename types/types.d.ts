@@ -12,7 +12,7 @@ export interface UserProfile {
   photoURL?: string;
   
   // Role
-  role: UserRole; // 'user' or 'admin'
+  role: UserRole;
   
   // Sign-in method
   signInMethod: SignInMethod;
@@ -31,6 +31,8 @@ export interface UserProfile {
     country: string;
   };
   
+  preferences?: UserPreferences;
+  
   // Relations (stored as arrays of IDs)
   orders: string[];
   wishlistItems: string[];
@@ -41,6 +43,19 @@ export interface UserProfile {
   // Timestamps
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface EmailNotifications {
+  orderUpdates: boolean;
+  promotions: boolean;
+  newArrivals: boolean;
+  wishlistAlerts: boolean;
+  newsletter: boolean;
+}
+
+export interface UserPreferences {
+  emailNotifications: EmailNotifications;
+  currency: string;
 }
 
 export interface Address {
