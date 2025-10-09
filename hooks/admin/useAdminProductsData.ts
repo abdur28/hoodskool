@@ -61,6 +61,31 @@ const generateId = (): string => {
 };
 
 /**
+ * Remove undefined values from an object
+ * Firebase doesn't support undefined values
+ */
+const removeUndefined = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefined(item));
+  }
+  
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    Object.keys(obj).forEach(key => {
+      const value = obj[key];
+      if (value !== undefined) {
+        cleaned[key] = removeUndefined(value);
+      }
+    });
+    return cleaned;
+  }
+  
+  return obj;
+};
+
+/**
  * Admin hook for product management
  */
 const useAdminProductsData = create<AdminProductDataStore>((set, get) => ({
@@ -228,17 +253,19 @@ const useAdminProductsData = create<AdminProductDataStore>((set, get) => ({
         throw new Error('A product with this name already exists');
       }
       
-      // Create the product
-      const productData = {
+      // Create the product and remove undefined values
+      const productData = removeUndefined({
         ...data,
         slug,
         viewCount: 0,
         salesCount: 0,
+      });
+      
+      const docRef = await addDoc(collection(db, 'products'), {
+        ...productData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      };
-      
-      const docRef = await addDoc(collection(db, 'products'), productData);
+      });
       
       // Add to local state
       const newProduct: Product = {
@@ -299,13 +326,18 @@ const useAdminProductsData = create<AdminProductDataStore>((set, get) => ({
         }
       }
       
-      // Add updatedAt timestamp to the data
-      const updatedData = {
+      // Add updatedAt timestamp and remove undefined values
+      const updatedData = removeUndefined({
         ...data,
-        updatedAt: serverTimestamp()
-      };
+      });
       
-      await updateDoc(productRef, updatedData);
+      // Only update if there's data to update
+      if (Object.keys(updatedData).length > 1) { // More than just updatedAt
+        await updateDoc(productRef, {
+          ...updatedData,
+          updatedAt: serverTimestamp(),
+        });
+      }
       
       set(state => ({
         loading: { ...state.loading, adminAction: false }

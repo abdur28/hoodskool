@@ -12,11 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, ArrowLeft, Plus, X } from "lucide-react";
 import { toast } from "sonner";
-import { Product, ProductImage } from "@/types/admin";
+import { Product, ProductImage, ProductVariant } from "@/types/admin";
 import useAdmin from "@/hooks/admin/useAdmin";
 import CategoryPathSelector from "./CategoryPathSelector";
 import CollectionSelector from "./CollectionSelector";
 import ImageUpload from "./ImageUpload";
+import VariantManager from "./VariantManager";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -64,6 +65,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
   });
   
   const [images, setImages] = useState<ProductImage[]>(product?.images || []);
+  const [variants, setVariants] = useState<ProductVariant[]>(product?.variants || []);
   const [tagInput, setTagInput] = useState("");
   const [colorInput, setColorInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
@@ -128,13 +130,18 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
       toast.error("Price must be greater than 0");
       return;
     }
+    if (formData.price > formData.compareAtPrice) {
+      toast.error("Price cannot be greater than compare at price");
+      return;
+    }
 
     setIsSaving(true);
     try {
       const productData = {
         ...formData,
         images,
-        discountPercent: discountPercent > 0 ? discountPercent : undefined,
+        variants: variants.length > 0 ? variants : [],
+        ...(discountPercent > 0  ? { discountPercent } : {}),
       };
 
       if (mode === "create") {
@@ -322,8 +329,8 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           {/* Pricing */}
           <Card>
             <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-              <CardDescription>Set product pricing</CardDescription>
+              <CardTitle>Default Pricing</CardTitle>
+              <CardDescription>Set default product pricing (can be overridden by variants)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -353,7 +360,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                 </div>
               </div>
 
-              {discountPercent > 0 && (
+              {discountPercent !== 0 && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm text-green-800">
                     💰 <strong>{discountPercent}% off</strong> - Customers save ${(formData.compareAtPrice - formData.price).toFixed(2)}
@@ -362,6 +369,15 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
               )}
             </CardContent>
           </Card>
+
+          {/* Product Variants */}
+          <VariantManager
+            variants={variants}
+            onChange={setVariants}
+            defaultPrice={formData.price}
+            availableSizes={formData.sizes}
+            availableColors={formData.colors}
+          />
 
           {/* Inventory */}
           <Card>
@@ -432,7 +448,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.tags.map(tag => (
                     <Badge key={tag} variant="secondary" className="gap-1">
                       {tag}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
+                      <Button type="button" onClick={() => removeTag(tag)} variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
                     </Badge>
                   ))}
                 </div>
@@ -442,7 +458,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
 
               {/* Colors */}
               <div className="space-y-2">
-                <Label>Colors</Label>
+                <Label>Colors (for variants)</Label>
                 <div className="flex gap-2">
                   <Input
                     value={colorInput}
@@ -458,7 +474,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.colors.map(color => (
                     <Badge key={color} variant="secondary" className="gap-1">
                       {color}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => removeColor(color)} />
+                      <Button type="button" onClick={() => removeColor(color)} variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
                     </Badge>
                   ))}
                 </div>
@@ -468,7 +484,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
 
               {/* Sizes */}
               <div className="space-y-2">
-                <Label>Sizes</Label>
+                <Label>Sizes (for variants)</Label>
                 <div className="flex gap-2">
                   <Input
                     value={sizeInput}
@@ -484,9 +500,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.sizes.map(size => (
                     <Badge key={size} variant="secondary" className="gap-1">
                       {size}
-                      <Button type="button" variant={"ghost"} onClick={() => removeSize(size)}>
-                        <X className="h-3 w-3 cursor-pointer"  />
-                      </Button>
+                      <Button type="button" onClick={() => removeSize(size)}  variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
                     </Badge>
                   ))}
                 </div>
@@ -512,7 +526,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.materials.map(material => (
                     <Badge key={material} variant="secondary" className="gap-1">
                       {material}
-                      <X className="h-3 w-3 cursor-pointer" onClick={() => removeMaterial(material)} />
+                      <Button type="button" onClick={() => removeMaterial(material)} variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
                     </Badge>
                   ))}
                 </div>
