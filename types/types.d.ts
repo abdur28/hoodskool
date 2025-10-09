@@ -39,10 +39,12 @@ export interface UserProfile {
   
   // Preferences
   emailOptIn?: boolean;
+
+  status?: 'active' | 'inactive';
   
   // Timestamps
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: any;
+  updatedAt: any;
 }
 
 export interface EmailNotifications {
@@ -108,8 +110,6 @@ export interface Product {
   compareAtPrice?: number;
   discountPercent?: number;
   
-  category: string;
-  subCategory?: string;
   itemType?: string;
   categoryPath: string;
   collection?: string;
@@ -295,4 +295,14 @@ export interface CloudinaryUploadResult {
   width: number;
   height: number;
   format: string;
+}
+
+export  interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  createdAt: any;
+  updatedAt: any;
+  subCategories?: Category[];
 }
