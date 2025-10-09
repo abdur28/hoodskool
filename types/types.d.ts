@@ -112,7 +112,7 @@ export interface Product {
   
   itemType?: string;
   categoryPath: string;
-  collection?: string;
+  collectionSlug?: string;
   
   images: ProductImage[];
   variants?: ProductVariant[];
@@ -146,10 +146,39 @@ export interface Product {
   viewCount?: number;
   salesCount?: number;
   
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  publishedAt?: Timestamp;
+  createdAt: any;
+  updatedAt: any;
+  publishedAt?: any;
 }
+
+export  interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  createdAt: any;
+  updatedAt: any;
+  subCategories?: Category[];
+}
+
+export interface Collection {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  bannerImage?: BannerImage;
+  createdAt: any;
+  updatedAt: any;
+}
+
+export interface BannerImage {
+  id: string;
+  publicId: string;
+  url: string;
+  secureUrl: string;
+  altText: string;
+}
+
 
 // ============ CART TYPES ============
 
@@ -295,14 +324,4 @@ export interface CloudinaryUploadResult {
   width: number;
   height: number;
   format: string;
-}
-
-export  interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  createdAt: any;
-  updatedAt: any;
-  subCategories?: Category[];
 }

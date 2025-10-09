@@ -1,4 +1,4 @@
-import { UserProfile, Order, Category } from './types';
+import { UserProfile, Order, Product, ProductImage, ProductVariant, Collection, BannerImage, Category } from './types';
 
 // ============ ADMIN STORE TYPES ============
 
@@ -7,6 +7,7 @@ export interface AdminLoadingState {
   orders: boolean;
   products: boolean;
   categories: boolean;
+  collections: boolean;
   analytics: boolean;
   adminAction: boolean;
 }
@@ -16,6 +17,7 @@ export interface AdminErrorState {
   orders: string | null;
   products: string | null;
   categories: string | null;
+  collections: string | null;
   analytics: string | null;
   adminAction: string | null;
 }
@@ -30,6 +32,7 @@ export interface AdminPaginationState {
   orders: PaginationState;
   products: PaginationState;
   categories: PaginationState;
+  collections: PaginationState;
 }
 
 // ============ FETCH OPTIONS ============
@@ -89,6 +92,50 @@ export interface AdminCategoryDataStore {
   resetCategories: () => void;
 }
 
+// ============ ADMIN COLLECTION DATA STORE ============
+
+export interface AdminCollectionDataStore {
+  // State
+  collections: Collection[];
+  
+  // Loading & Error states
+  loading: AdminLoadingState;
+  error: AdminErrorState;
+  pagination: AdminPaginationState;
+  
+  // Methods
+  fetchCollections: (options?: FetchOptions) => Promise<void>;
+  getCollectionById: (collectionId: string) => Promise<Collection | null>;
+  createCollection: (data: Omit<Collection, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateCollection: (collectionId: string, data: Partial<Collection>) => Promise<void>;
+  deleteCollection: (collectionId: string) => Promise<void>;
+  uploadBannerImage: (file: File) => Promise<BannerImage>;
+  deleteBannerImage: (publicId: string) => Promise<void>;
+  resetCollections: () => void;
+}
+
+// ============ ADMIN PRODUCT DATA STORE ============
+
+export interface AdminProductDataStore {
+  // State
+  products: Product[];
+  
+  // Loading & Error states
+  loading: AdminLoadingState;
+  error: AdminErrorState;
+  pagination: AdminPaginationState;
+  
+  // Methods
+  fetchProducts: (options?: FetchOptions) => Promise<void>;
+  getProductById: (productId: string) => Promise<Product | null>;
+  createProduct: (data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>;
+  updateProduct: (productId: string, data: Partial<Product>) => Promise<void>;
+  deleteProduct: (productId: string) => Promise<void>;
+  uploadProductImages: (files: File[]) => Promise<ProductImage[]>;
+  deleteProductImage: (publicId: string) => Promise<void>;
+  resetProducts: () => void;
+}
+
 // ============ ADMIN ANALYTICS ============
 
 export interface AdminAnalytics {
@@ -116,7 +163,10 @@ export interface AdminAnalytics {
 
 // ============ ADMIN STORE ============
 
-export interface AdminStore extends AdminUserDataStore, AdminCategoryDataStore {
+export interface AdminStore extends AdminUserDataStore, AdminCategoryDataStore, AdminCollectionDataStore, AdminProductDataStore {
   // Global methods
   resetErrors: () => void;
 }
+
+// Re-export types for convenience
+export type { Product, ProductImage, ProductVariant, Collection, BannerImage };
