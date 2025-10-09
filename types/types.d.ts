@@ -112,6 +112,7 @@ export interface Product {
   subCategory?: string;
   itemType?: string;
   categoryPath: string;
+  collection?: string;
   
   images: ProductImage[];
   variants?: ProductVariant[];
@@ -265,6 +266,7 @@ export interface ProductFilters {
   category?: string;
   subCategory?: string;
   itemType?: string;
+  collection?: string;
   minPrice?: number;
   maxPrice?: number;
   colors?: string[];

@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { adminAuth } from '@/lib/firebase/admin';
 import { UserRole } from '@/types/types';
+import { getUserProfile } from '../firebase/auth';
 
 const COOKIE_NAME = 'auth-token';
 
@@ -26,11 +27,16 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 
     // Verify session cookie
     const decodedClaims = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const user = await getUserProfile(decodedClaims.uid);
+
+    if (!user) {
+      return null;
+    }
 
     return {
-      uid: decodedClaims.uid,
-      email: decodedClaims.email,
-      role: (decodedClaims.role as UserRole) || 'user',
+      uid: user.uid,
+      email: user.email,
+      role: (user.role as UserRole) || 'user',
     };
   } catch (error) {
     // Invalid or expired session
@@ -56,11 +62,11 @@ export async function requireAuth(redirectUrl?: string): Promise<AuthUser> {
  * Require admin role in Server Component
  * Redirects to home if not admin
  */
-export async function requireAdmin(): Promise<AuthUser> {
-  const user = await requireAuth();
+export async function requireAdmin(redirectUrl?: string): Promise<AuthUser> {
+  const user = await requireAuth(redirectUrl);
 
   if (user.role !== 'admin') {
-    redirect('/');
+    notFound();
   }
 
   return user;

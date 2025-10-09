@@ -22,8 +22,8 @@ const DashboardLayout = ({ authUser } : { authUser: AuthUser }) => {
     const pathname = usePathname();
     const { signOut, user, profile } = useAuth();
 
-    if (!user) {
-        redirect('/auth/login?redirect=/dashboard');
+    if (!user || !profile) {
+        return null;
     }   
 
     if (user?.uid !== authUser.uid) {

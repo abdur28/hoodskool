@@ -57,6 +57,9 @@ export async function getProducts(
     if (filters?.itemType) {
       q = query(q, where('itemType', '==', filters.itemType));
     }
+    if (filters?.collection) {
+      q = query(q, where('collection', '==', filters.collection));
+    }
     if (filters?.inStock !== undefined) {
       q = query(q, where('inStock', '==', filters.inStock));
     }
@@ -204,6 +207,10 @@ export async function getBestsellers(limitCount: number = 8) {
     { isBestseller: true },
     { limit: limitCount, orderBy: 'salesCount' }
   );
+}
+
+export async function getCollections(collectionName: string) {
+  return getProducts({ collection: collectionName });
 }
 
 // ============ CART OPERATIONS ============
