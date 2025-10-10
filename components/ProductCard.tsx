@@ -283,7 +283,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         <div className="flex-1 min-w-0">
           {/* Category */}
           <p className="text-[10px] text-foreground/60 font-body uppercase tracking-wider">
-            {product.category}
+            {product.categoryPath}
           </p>
 
           {/* Product Name */}

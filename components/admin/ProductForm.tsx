@@ -18,6 +18,8 @@ import CategoryPathSelector from "./CategoryPathSelector";
 import CollectionSelector from "./CollectionSelector";
 import ImageUpload from "./ImageUpload";
 import VariantManager from "./VariantManager";
+import ColorPicker from "./ColorPicker";
+import { Color } from "@/types/types";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -51,7 +53,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     totalStock: product?.totalStock || 0,
     lowStockAlert: product?.lowStockAlert || 10,
     tags: product?.tags || [],
-    colors: product?.colors || [],
+    colors: product?.colors || [] as Color[],
     sizes: product?.sizes || [],
     materials: product?.materials || [],
     isNew: product?.isNew || false,
@@ -67,7 +69,6 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
   const [images, setImages] = useState<ProductImage[]>(product?.images || []);
   const [variants, setVariants] = useState<ProductVariant[]>(product?.variants || []);
   const [tagInput, setTagInput] = useState("");
-  const [colorInput, setColorInput] = useState("");
   const [sizeInput, setSizeInput] = useState("");
   const [materialInput, setMaterialInput] = useState("");
 
@@ -130,7 +131,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
       toast.error("Price must be greater than 0");
       return;
     }
-    if (formData.price > formData.compareAtPrice) {
+    if (formData.compareAtPrice && formData.compareAtPrice > 0 && formData.price > formData.compareAtPrice) {
       toast.error("Price cannot be greater than compare at price");
       return;
     }
@@ -170,17 +171,6 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
 
   const removeTag = (tag: string) => {
     setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
-  };
-
-  const addColor = () => {
-    if (colorInput.trim() && !formData.colors.includes(colorInput.trim())) {
-      setFormData(prev => ({ ...prev, colors: [...prev.colors, colorInput.trim()] }));
-      setColorInput("");
-    }
-  };
-
-  const removeColor = (color: string) => {
-    setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }));
   };
 
   const addSize = () => {
@@ -448,7 +438,9 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.tags.map(tag => (
                     <Badge key={tag} variant="secondary" className="gap-1">
                       {tag}
-                      <Button type="button" onClick={() => removeTag(tag)} variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
+                      <Button type="button" onClick={() => removeTag(tag)} variant="ghost">
+                        <X className="h-3 w-3 cursor-pointer text-red-500" />
+                      </Button>
                     </Badge>
                   ))}
                 </div>
@@ -456,29 +448,11 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
 
               <Separator />
 
-              {/* Colors */}
-              <div className="space-y-2">
-                <Label>Colors (for variants)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={colorInput}
-                    onChange={(e) => setColorInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addColor())}
-                    placeholder="Add color..."
-                  />
-                  <Button type="button" onClick={addColor} variant="outline">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.colors.map(color => (
-                    <Badge key={color} variant="secondary" className="gap-1">
-                      {color}
-                      <Button type="button" onClick={() => removeColor(color)} variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+              {/* Colors - Now using ColorPicker */}
+              <ColorPicker
+                colors={formData.colors}
+                onChange={(colors) => setFormData(prev => ({ ...prev, colors }))}
+              />
 
               <Separator />
 
@@ -500,7 +474,9 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.sizes.map(size => (
                     <Badge key={size} variant="secondary" className="gap-1">
                       {size}
-                      <Button type="button" onClick={() => removeSize(size)}  variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
+                      <Button type="button" onClick={() => removeSize(size)} variant="ghost">
+                        <X className="h-3 w-3 cursor-pointer text-red-500" />
+                      </Button>
                     </Badge>
                   ))}
                 </div>
@@ -526,7 +502,9 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.materials.map(material => (
                     <Badge key={material} variant="secondary" className="gap-1">
                       {material}
-                      <Button type="button" onClick={() => removeMaterial(material)} variant="ghost"><X className="h-3 w-3 cursor-pointer text-red-500"  /></Button>
+                      <Button type="button" onClick={() => removeMaterial(material)} variant="ghost">
+                        <X className="h-3 w-3 cursor-pointer text-red-500" />
+                      </Button>
                     </Badge>
                   ))}
                 </div>

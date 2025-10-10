@@ -90,7 +90,7 @@ export interface ProductImage {
 export interface ProductVariant {
   id: string;
   size?: string;
-  color?: string;
+  color?: Color;
   sku: string;
   price?: number;
   stockCount: number;
@@ -111,7 +111,7 @@ export interface Product {
   discountPercent?: number;
   
   itemType?: string;
-  categoryPath: string;
+  categoryPath: string; // Category path e.g. "Clothing > Tops"
   collectionSlug?: string;
   
   images: ProductImage[];
@@ -123,7 +123,7 @@ export interface Product {
   lowStockAlert?: number;
   
   tags: string[];
-  colors: string[];
+  colors: Color[];
   sizes: string[];
   materials?: string[];
   
@@ -179,6 +179,11 @@ export interface BannerImage {
   altText: string;
 }
 
+export interface Color {
+  name: string;
+  hex: string;
+}
+
 
 // ============ CART TYPES ============
 
@@ -193,7 +198,7 @@ export interface CartItem {
   image: string;
   
   size?: string;
-  color?: string;
+  color?: Color;
   sku: string;
   
   inStock: boolean;

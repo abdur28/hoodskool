@@ -141,8 +141,8 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                             {item.size && (
                               <p className="text-xs text-foreground/60">Size: {item.size}</p>
                             )}
-                            {item.color && (
-                              <p className="text-xs text-foreground/60">Color: {item.color}</p>
+                            {item.color?.name && (
+                              <p className="text-xs text-foreground/60">Color: {item.color.name}</p>
                             )}
                             {!item.inStock && (
                               <p className="text-xs text-red-500 mt-1">Out of stock</p>

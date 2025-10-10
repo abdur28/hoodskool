@@ -25,13 +25,14 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Package, DollarSign } from "lucide-react";
 import { ProductVariant } from "@/types/admin";
+import { Color } from "@/types/types";
 
 interface VariantManagerProps {
   variants: ProductVariant[];
   onChange: (variants: ProductVariant[]) => void;
   defaultPrice: number;
   availableSizes: string[];
-  availableColors: string[];
+  availableColors: Color[];
 }
 
 export default function VariantManager({
@@ -45,7 +46,7 @@ export default function VariantManager({
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
   const [formData, setFormData] = useState<Partial<ProductVariant>>({
     size: "",
-    color: "",
+    color: undefined,
     sku: "",
     price: undefined,
     stockCount: 0,
@@ -56,10 +57,10 @@ export default function VariantManager({
     return `variant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   };
 
-  const generateVariantSKU = (size?: string, color?: string) => {
+  const generateVariantSKU = (size?: string, color?: Color) => {
     const parts = [];
     if (size) parts.push(size.toUpperCase());
-    if (color) parts.push(color.toUpperCase().replace(/\s+/g, ""));
+    if (color) parts.push(color.name.toUpperCase().replace(/\s+/g, ""));
     return parts.join("-") + "-" + Date.now().toString().slice(-4);
   };
 
@@ -67,7 +68,7 @@ export default function VariantManager({
     setEditingVariant(null);
     setFormData({
       size: "",
-      color: "",
+      color: undefined,
       sku: "",
       price: undefined,
       stockCount: 0,
@@ -80,7 +81,7 @@ export default function VariantManager({
     setEditingVariant(variant);
     setFormData({
       size: variant.size || "",
-      color: variant.color || "",
+      color: variant.color || undefined,
       sku: variant.sku,
       price: variant.price,
       stockCount: variant.stockCount,
@@ -126,12 +127,21 @@ export default function VariantManager({
   const getVariantLabel = (variant: ProductVariant) => {
     const parts = [];
     if (variant.size) parts.push(variant.size);
-    if (variant.color) parts.push(variant.color);
+    if (variant.color) parts.push(variant.color.name);
     return parts.join(" / ") || "Variant";
   };
 
   const getVariantPrice = (variant: ProductVariant) => {
     return variant.price || defaultPrice;
+  };
+
+  const handleColorChange = (colorName: string) => {
+    if (colorName === "none") {
+      setFormData(prev => ({ ...prev, color: undefined }));
+    } else {
+      const selectedColor = availableColors.find(c => c.name === colorName);
+      setFormData(prev => ({ ...prev, color: selectedColor }));
+    }
   };
 
   return (
@@ -146,7 +156,7 @@ export default function VariantManager({
           </div>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button onClick={openAddDialog} size="sm">
+              <Button onClick={openAddDialog} type="button" size="sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Add Variant
               </Button>
@@ -187,16 +197,36 @@ export default function VariantManager({
                   <div className="space-y-2">
                     <Label htmlFor="color">Color</Label>
                     <Select
-                      value={formData.color || "none"}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, color: value === "none" ? "" : value }))}
+                      value={formData.color?.name || "none"}
+                      onValueChange={handleColorChange}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select color" />
+                        <SelectValue placeholder="Select color">
+                          {formData.color ? (
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-4 h-4 rounded-full border border-foreground/20"
+                                style={{ backgroundColor: formData.color.hex }}
+                              />
+                              <span>{formData.color.name}</span>
+                            </div>
+                          ) : (
+                            "Select color"
+                          )}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">None</SelectItem>
                         {availableColors.map(color => (
-                          <SelectItem key={color} value={color}>{color}</SelectItem>
+                          <SelectItem key={color.name} value={color.name}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-4 h-4 rounded-full border border-foreground/20"
+                                style={{ backgroundColor: color.hex }}
+                              />
+                              <span>{color.name}</span>
+                            </div>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -265,7 +295,7 @@ export default function VariantManager({
               </div>
 
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button onClick={handleSave}>
@@ -284,7 +314,7 @@ export default function VariantManager({
             <p className="text-xs text-muted-foreground mb-4">
               Add variants to offer different sizes, colors, or options
             </p>
-            <Button onClick={openAddDialog} variant="outline" size="sm">
+            <Button type="button" onClick={openAddDialog} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Add First Variant
             </Button>
@@ -298,6 +328,13 @@ export default function VariantManager({
               >
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
+                    {variant.color && (
+                      <div 
+                        className="w-5 h-5 rounded-full border-2 border-foreground/20 shadow-sm flex-shrink-0"
+                        style={{ backgroundColor: variant.color.hex }}
+                        title={variant.color.name}
+                      />
+                    )}
                     <span className="font-medium">{getVariantLabel(variant)}</span>
                     {!variant.inStock && (
                       <Badge variant="destructive" className="text-xs">
@@ -324,6 +361,7 @@ export default function VariantManager({
                   <Button
                     variant="ghost"
                     size="sm"
+                    type="button"
                     onClick={() => openEditDialog(variant)}
                   >
                     <Edit className="h-4 w-4" />
@@ -332,6 +370,7 @@ export default function VariantManager({
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(variant.id)}
+                    type="button"
                   >
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>

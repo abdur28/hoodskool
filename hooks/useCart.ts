@@ -30,7 +30,7 @@ interface CartState {
   updateQuantity: (cartItemId: string, quantity: number, userId?: string) => Promise<void>;
   clearCart: (userId?: string) => Promise<void>;
   syncWithFirebase: (userId: string) => Promise<void>;
-  removeDuplicates: () => void; // Manual deduplication
+  removeDuplicates: () => void;
   
   // Internal helpers
   calculateTotals: () => void;
@@ -42,9 +42,38 @@ const STANDARD_SHIPPING = 10;
 
 // Helper function to remove undefined values from objects (Firestore doesn't allow undefined)
 const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> => {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([_, value]) => value !== undefined)
-  ) as Partial<T>;
+  const result: any = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      // Handle nested objects (like Color)
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const cleaned = removeUndefined(value);
+        if (Object.keys(cleaned).length > 0) {
+          result[key] = cleaned;
+        }
+      } else {
+        result[key] = value;
+      }
+    }
+  }
+  
+  return result as Partial<T>;
+};
+
+// Helper function to compare cart items (accounting for Color objects)
+const isSameCartItem = (item1: CartItem, item2: Omit<CartItem, 'id'>): boolean => {
+  const sameProduct = item1.productId === item2.productId;
+  const sameVariant = item1.variantId === item2.variantId;
+  
+  // Compare colors by name if they exist
+  const sameColor = 
+    (!item1.color && !item2.color) || 
+    (item1.color?.name === item2.color?.name);
+  
+  const sameSize = item1.size === item2.size;
+  
+  return sameProduct && sameVariant && sameColor && sameSize;
 };
 
 // Helper function to deduplicate cart items
@@ -52,7 +81,9 @@ const deduplicateCartItems = (items: CartItem[]): CartItem[] => {
   const seen = new Map<string, CartItem>();
   
   items.forEach(item => {
-    const key = `${item.productId}-${item.variantId || 'no-variant'}`;
+    // Create unique key including color name
+    const colorKey = item.color?.name || 'no-color';
+    const key = `${item.productId}-${item.variantId || 'no-variant'}-${item.size || 'no-size'}-${colorKey}`;
     const existing = seen.get(key);
     
     if (existing) {
@@ -162,12 +193,8 @@ export const useCart = create<CartState>()(
             // Guest user - update local storage
             const { items } = get();
             
-            // Check if item already exists (same product + variant)
-            const existingIndex = items.findIndex(
-              item => 
-                item.productId === sanitizedItem.productId && 
-                item.variantId === sanitizedItem.variantId
-            );
+            // Check if item already exists (same product + variant + color)
+            const existingIndex = items.findIndex(item => isSameCartItem(item, sanitizedItem));
 
             let updatedItems: CartItem[];
             
@@ -347,10 +374,7 @@ export const useCart = create<CartState>()(
           // Both have items - merge them intelligently
           // Filter out local items that are already in Firebase cart
           const uniqueLocalItems = localItems.filter(localItem => 
-            !firebaseItems.some(firebaseItem => 
-              firebaseItem.productId === localItem.productId &&
-              firebaseItem.variantId === localItem.variantId
-            )
+            !firebaseItems.some(firebaseItem => isSameCartItem(firebaseItem, localItem))
           );
 
           // Only sync items that don't already exist
@@ -403,11 +427,12 @@ export const useCart = create<CartState>()(
 // Helper hook to get just the cart count (for navbar badge)
 export const useCartCount = () => useCart(state => state.itemCount);
 
-// Helper hook to check if item is in cart
+// Helper hook to check if item is in cart (with Color support)
 export const useIsInCart = (productId: string, variantId?: string) => {
   return useCart(state => 
     state.items.some(
-      item => item.productId === productId && item.variantId === variantId
+      item => item.productId === productId && 
+              (!variantId || item.variantId === variantId)
     )
   );
 };
