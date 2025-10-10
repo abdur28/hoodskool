@@ -1,26 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import CrossedLink from "@/components/ui/crossed-link";
 import VariantSelector from "@/components/product/VariantSelector";
 import AddToCartSection from "@/components/product/AddToCartSection";
 import ProductDetails from "@/components/product/ProductDetails";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import type { Product, ProductVariant } from "@/types/types";
-
 
 export default function ProductInfo({ productAsString }: { productAsString: string }) {
   const product: Product = JSON.parse(productAsString);
+  const { formatPrice, getPriceWithCompare } = useCurrency();
+  
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     product.variants?.[0] || null
   );
 
-  // Calculate price
-  const displayPrice = selectedVariant?.price || product.price;
-  const discountedPrice = product.discountPercent 
-    ? displayPrice - (displayPrice * product.discountPercent / 100)
-    : displayPrice;
+  // Memoize the variant change handler to prevent infinite loops
+  const handleVariantChange = useCallback((variant: ProductVariant) => {
+    setSelectedVariant(variant);
+  }, []);
+
+  // Get prices based on selected variant or product default
+  const pricesSource = selectedVariant?.prices || product.prices;
+  const priceData = getPriceWithCompare(pricesSource);
 
   // Parse category path for breadcrumb
   const categoryParts = product.categoryPath.split(" > ");
@@ -67,9 +72,9 @@ export default function ProductInfo({ productAsString }: { productAsString: stri
             New
           </span>
         )}
-        {product.discountPercent && (
+        {priceData.discountPercent > 0 && (
           <span className="px-3 py-1 bg-red-500 text-white text-xs font-body font-semibold uppercase tracking-wider">
-            -{product.discountPercent}% Off
+            -{priceData.discountPercent}% Off
           </span>
         )}
         {product.isLimitedEdition && (
@@ -125,30 +130,6 @@ export default function ProductInfo({ productAsString }: { productAsString: stri
         </motion.div>
       )}
 
-      {/* Available Colors Preview */}
-      {product.colors && product.colors.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.45 }}
-          className="flex items-center gap-3 mb-6"
-        >
-          <span className="font-body text-xs text-foreground/60 uppercase tracking-wider">
-            Available Colors:
-          </span>
-          <div className="flex gap-1.5">
-            {product.colors.map((color) => (
-              <div
-                key={color.name}
-                className="w-5 h-5 rounded-full ring-1 ring-foreground/20"
-                style={{ backgroundColor: color.hex }}
-                title={color.name}
-              />
-            ))}
-          </div>
-        </motion.div>
-      )}
-
       {/* Price */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -158,14 +139,19 @@ export default function ProductInfo({ productAsString }: { productAsString: stri
       >
         <div className="flex items-baseline gap-3">
           <span className="font-body text-3xl text-foreground">
-            ${discountedPrice.toFixed(2)}
+            {formatPrice(priceData.price)}
           </span>
-          {product.discountPercent && (
+          {priceData.compareAtPrice > 0 && (
             <span className="font-body text-xl text-foreground/40 line-through">
-              ${displayPrice.toFixed(2)}
+              {formatPrice(priceData.compareAtPrice)}
             </span>
           )}
         </div>
+        {priceData.discountPercent > 0 && priceData.compareAtPrice > 0 && (
+          <p className="text-sm text-green-600 mt-2">
+            You save {formatPrice(priceData.compareAtPrice - priceData.price)}
+          </p>
+        )}
       </motion.div>
 
       {/* Divider */}
@@ -178,7 +164,7 @@ export default function ProductInfo({ productAsString }: { productAsString: stri
           colors={product.colors || []}
           sizes={product.sizes || []}
           selectedVariant={selectedVariant}
-          onVariantChange={setSelectedVariant}
+          onVariantChange={handleVariantChange}
         />
       )}
 
@@ -186,7 +172,6 @@ export default function ProductInfo({ productAsString }: { productAsString: stri
       <AddToCartSection 
         product={product} 
         selectedVariant={selectedVariant}
-        discountedPrice={discountedPrice}
       />
 
       {/* Divider */}

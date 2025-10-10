@@ -7,18 +7,17 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart, useIsInCart } from "@/hooks/useCart";
 import { useDashboard, useIsInWishlist } from "@/hooks/useDashboard";
+import { useCurrency } from "@/contexts/CurrencyContext";
 import type { Product, ProductVariant, CartItem } from "@/types/types";
 
 interface AddToCartSectionProps {
   product: Product;
   selectedVariant: ProductVariant | null;
-  discountedPrice: number;
 }
 
 export default function AddToCartSection({
   product,
   selectedVariant,
-  discountedPrice,
 }: AddToCartSectionProps) {
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
@@ -27,6 +26,7 @@ export default function AddToCartSection({
   const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
+  const { getPrice } = useCurrency();
   const addItem = useCart((state) => state.addItem);
   const isInCart = useIsInCart(product.id, selectedVariant?.id);
   const toggleWishlist = useDashboard((state) => state.toggleWishlist);
@@ -34,6 +34,12 @@ export default function AddToCartSection({
 
   const maxQuantity = selectedVariant?.stockCount || product.totalStock || 999;
   const inStock = selectedVariant?.inStock ?? product.inStock;
+
+  // Get the prices array (variant or product default)
+  const pricesSource = selectedVariant?.prices || product.prices;
+  
+  // Get the current price in selected currency
+  const currentPrice = getPrice(pricesSource);
 
   const handleQuantityChange = (delta: number) => {
     setQuantity((prev) => Math.max(1, Math.min(prev + delta, maxQuantity)));
@@ -68,7 +74,7 @@ export default function AddToCartSection({
         productId: product.id,
         name: product.name,
         slug: product.slug,
-        price: discountedPrice,
+        prices: pricesSource || [], // Store the full prices array
         quantity: quantity,
         image: primaryImage?.secureUrl || "/placeholder-product.jpg",
         sku: selectedVariant?.sku || product.sku,
@@ -80,7 +86,7 @@ export default function AddToCartSection({
       if (selectedVariant) {
         if (selectedVariant.id) cartItem.variantId = selectedVariant.id;
         if (selectedVariant.size) cartItem.size = selectedVariant.size;
-        if (selectedVariant.color) cartItem.color = selectedVariant.color; // Now passing the full Color object
+        if (selectedVariant.color) cartItem.color = selectedVariant.color;
       }
 
       await addItem(cartItem, user?.uid);
@@ -104,7 +110,7 @@ export default function AddToCartSection({
         <label className="font-body text-sm font-medium text-foreground uppercase tracking-wider">
           Quantity
         </label>
-        <div className="flex items-center  border border-foreground/20">
+        <div className="flex items-center border border-foreground/20">
           <button
             onClick={() => handleQuantityChange(-1)}
             disabled={quantity <= 1}

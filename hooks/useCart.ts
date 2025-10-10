@@ -16,12 +16,8 @@ interface CartState {
   isLoading: boolean;
   lastSynced: number | null;
 
-  // Computed values
+  // Computed values (currency-agnostic)
   itemCount: number;
-  subtotal: number;
-  tax: number;
-  shipping: number;
-  total: number;
 
   // Actions
   loadCart: (userId?: string) => Promise<void>;
@@ -33,20 +29,15 @@ interface CartState {
   removeDuplicates: () => void;
   
   // Internal helpers
-  calculateTotals: () => void;
+  calculateItemCount: () => void;
 }
 
-const TAX_RATE = 0.08; // 8% tax
-const FREE_SHIPPING_THRESHOLD = 100;
-const STANDARD_SHIPPING = 10;
-
-// Helper function to remove undefined values from objects (Firestore doesn't allow undefined)
+// Helper function to remove undefined values from objects
 const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> => {
   const result: any = {};
   
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
-      // Handle nested objects (like Color)
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const cleaned = removeUndefined(value);
         if (Object.keys(cleaned).length > 0) {
@@ -61,16 +52,13 @@ const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> => {
   return result as Partial<T>;
 };
 
-// Helper function to compare cart items (accounting for Color objects)
+// Helper function to compare cart items
 const isSameCartItem = (item1: CartItem, item2: Omit<CartItem, 'id'>): boolean => {
   const sameProduct = item1.productId === item2.productId;
   const sameVariant = item1.variantId === item2.variantId;
-  
-  // Compare colors by name if they exist
   const sameColor = 
     (!item1.color && !item2.color) || 
     (item1.color?.name === item2.color?.name);
-  
   const sameSize = item1.size === item2.size;
   
   return sameProduct && sameVariant && sameColor && sameSize;
@@ -81,13 +69,11 @@ const deduplicateCartItems = (items: CartItem[]): CartItem[] => {
   const seen = new Map<string, CartItem>();
   
   items.forEach(item => {
-    // Create unique key including color name
     const colorKey = item.color?.name || 'no-color';
     const key = `${item.productId}-${item.variantId || 'no-variant'}-${item.size || 'no-size'}-${colorKey}`;
     const existing = seen.get(key);
     
     if (existing) {
-      // Merge quantities if duplicate found
       seen.set(key, {
         ...existing,
         quantity: Math.min(
@@ -111,36 +97,25 @@ export const useCart = create<CartState>()(
       isLoading: false,
       lastSynced: null,
       itemCount: 0,
-      subtotal: 0,
-      tax: 0,
-      shipping: 0,
-      total: 0,
 
-      // Calculate totals
-      calculateTotals: () => {
+      // Calculate item count (currency-agnostic)
+      calculateItemCount: () => {
         const { items } = get();
-        const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        const tax = subtotal * TAX_RATE;
-        const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING;
-        const total = subtotal + tax + shipping;
         const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-
-        set({ subtotal, tax, shipping, total, itemCount });
+        set({ itemCount });
       },
 
       // Load cart from Firebase or use local storage
       loadCart: async (userId?: string) => {
         if (!userId) {
-          // Guest user - use items from localStorage (already loaded by persist)
           const { items } = get();
           const deduplicatedItems = deduplicateCartItems(items);
           
-          // Update with deduplicated items if there were duplicates
           if (deduplicatedItems.length !== items.length) {
             set({ items: deduplicatedItems });
           }
           
-          get().calculateTotals();
+          get().calculateItemCount();
           return;
         }
 
@@ -154,7 +129,6 @@ export const useCart = create<CartState>()(
             return;
           }
 
-          // Deduplicate items from Firebase (just in case)
           const deduplicatedItems = deduplicateCartItems(items);
 
           set({ 
@@ -162,7 +136,7 @@ export const useCart = create<CartState>()(
             lastSynced: Date.now(),
             isLoading: false 
           });
-          get().calculateTotals();
+          get().calculateItemCount();
         } catch (error) {
           console.error('Failed to load cart:', error);
           set({ isLoading: false });
@@ -174,11 +148,9 @@ export const useCart = create<CartState>()(
         set({ isLoading: true });
 
         try {
-          // Remove undefined values before sending to Firestore
           const sanitizedItem = removeUndefined(newItem) as Omit<CartItem, 'id'>;
 
           if (userId) {
-            // Authenticated user - add to Firebase
             const { cartItemId, error } = await addToCartFirebase(userId, sanitizedItem);
             
             if (error) {
@@ -187,19 +159,14 @@ export const useCart = create<CartState>()(
               return;
             }
 
-            // Reload cart from Firebase to get updated state
             await get().loadCart(userId);
           } else {
-            // Guest user - update local storage
             const { items } = get();
-            
-            // Check if item already exists (same product + variant + color)
             const existingIndex = items.findIndex(item => isSameCartItem(item, sanitizedItem));
 
             let updatedItems: CartItem[];
             
             if (existingIndex >= 0) {
-              // Update existing item quantity
               const existingItem = items[existingIndex];
               const newQuantity = Math.min(
                 existingItem.quantity + sanitizedItem.quantity,
@@ -212,13 +179,12 @@ export const useCart = create<CartState>()(
                   : item
               );
             } else {
-              // Add new item with temporary ID
               const tempId = `temp_${Date.now()}_${Math.random()}`;
               updatedItems = [...items, { ...sanitizedItem, id: tempId }];
             }
 
             set({ items: updatedItems, isLoading: false });
-            get().calculateTotals();
+            get().calculateItemCount();
           }
         } catch (error) {
           console.error('Failed to add item:', error);
@@ -232,7 +198,6 @@ export const useCart = create<CartState>()(
 
         try {
           if (userId) {
-            // Authenticated user - remove from Firebase
             const { error } = await removeFromCartFirebase(userId, cartItemId);
             
             if (error) {
@@ -241,20 +206,18 @@ export const useCart = create<CartState>()(
               return;
             }
 
-            // Update local state
             set(state => ({
               items: state.items.filter(item => item.id !== cartItemId),
               isLoading: false
             }));
           } else {
-            // Guest user - remove from local storage
             set(state => ({
               items: state.items.filter(item => item.id !== cartItemId),
               isLoading: false
             }));
           }
 
-          get().calculateTotals();
+          get().calculateItemCount();
         } catch (error) {
           console.error('Failed to remove item:', error);
           set({ isLoading: false });
@@ -272,7 +235,6 @@ export const useCart = create<CartState>()(
 
         try {
           if (userId) {
-            // Authenticated user - update in Firebase
             const { error } = await updateCartItemQuantity(userId, cartItemId, quantity);
             
             if (error) {
@@ -282,7 +244,6 @@ export const useCart = create<CartState>()(
             }
           }
 
-          // Update local state
           set(state => ({
             items: state.items.map(item =>
               item.id === cartItemId
@@ -292,7 +253,7 @@ export const useCart = create<CartState>()(
             isLoading: false
           }));
 
-          get().calculateTotals();
+          get().calculateItemCount();
         } catch (error) {
           console.error('Failed to update quantity:', error);
           set({ isLoading: false });
@@ -318,10 +279,6 @@ export const useCart = create<CartState>()(
             items: [], 
             isLoading: false,
             itemCount: 0,
-            subtotal: 0,
-            tax: 0,
-            shipping: 0,
-            total: 0
           });
         } catch (error) {
           console.error('Failed to clear cart:', error);
@@ -336,7 +293,6 @@ export const useCart = create<CartState>()(
         set({ isLoading: true });
 
         try {
-          // First, get existing cart from Firebase
           const { items: firebaseItems, error: loadError } = await getCart(userId);
           
           if (loadError) {
@@ -345,18 +301,16 @@ export const useCart = create<CartState>()(
             return;
           }
 
-          // If no local items, just use Firebase items
           if (localItems.length === 0) {
             set({ 
               items: firebaseItems, 
               lastSynced: Date.now(),
               isLoading: false 
             });
-            get().calculateTotals();
+            get().calculateItemCount();
             return;
           }
 
-          // If Firebase cart is empty, sync local items to Firebase
           if (firebaseItems.length === 0) {
             const { error } = await syncCart(userId, localItems);
             
@@ -366,23 +320,18 @@ export const useCart = create<CartState>()(
               return;
             }
 
-            // Reload to get proper IDs from Firebase
             await get().loadCart(userId);
             return;
           }
 
-          // Both have items - merge them intelligently
-          // Filter out local items that are already in Firebase cart
           const uniqueLocalItems = localItems.filter(localItem => 
             !firebaseItems.some(firebaseItem => isSameCartItem(firebaseItem, localItem))
           );
 
-          // Only sync items that don't already exist
           if (uniqueLocalItems.length > 0) {
             await syncCart(userId, uniqueLocalItems);
           }
 
-          // Reload the complete cart from Firebase
           await get().loadCart(userId);
         } catch (error) {
           console.error('Failed to sync cart:', error);
@@ -390,7 +339,7 @@ export const useCart = create<CartState>()(
         }
       },
 
-      // Manual deduplication - call this if duplicates are detected
+      // Manual deduplication
       removeDuplicates: () => {
         const { items } = get();
         const deduplicatedItems = deduplicateCartItems(items);
@@ -398,18 +347,16 @@ export const useCart = create<CartState>()(
         if (deduplicatedItems.length !== items.length) {
           console.log(`Removed ${items.length - deduplicatedItems.length} duplicate items`);
           set({ items: deduplicatedItems });
-          get().calculateTotals();
+          get().calculateItemCount();
         }
       },
     }),
     {
       name: 'hoodskool-cart',
       storage: createJSONStorage(() => localStorage),
-      // Only persist items for guest users
       partialize: (state) => ({ 
         items: state.items,
       }),
-      // Deduplicate items when rehydrating from storage
       onRehydrateStorage: () => (state) => {
         if (state) {
           const deduplicatedItems = deduplicateCartItems(state.items);
@@ -417,17 +364,17 @@ export const useCart = create<CartState>()(
             console.log('Removed duplicates during rehydration');
             state.items = deduplicatedItems;
           }
-          state.calculateTotals();
+          state.calculateItemCount();
         }
       },
     }
   )
 );
 
-// Helper hook to get just the cart count (for navbar badge)
+// Helper hook to get cart count
 export const useCartCount = () => useCart(state => state.itemCount);
 
-// Helper hook to check if item is in cart (with Color support)
+// Helper hook to check if item is in cart
 export const useIsInCart = (productId: string, variantId?: string) => {
   return useCart(state => 
     state.items.some(

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -25,12 +26,13 @@ import {
 } from "@/components/ui/select";
 import { Plus, Edit, Trash2, Package, DollarSign } from "lucide-react";
 import { ProductVariant } from "@/types/admin";
-import { Color } from "@/types/types";
+import { Color, ProductPrice, CurrencyCode } from "@/types/types";
+import { availableCurrencies } from "@/constants";
 
 interface VariantManagerProps {
   variants: ProductVariant[];
   onChange: (variants: ProductVariant[]) => void;
-  defaultPrice: number;
+  defaultPrices: ProductPrice[];
   availableSizes: string[];
   availableColors: Color[];
 }
@@ -38,17 +40,31 @@ interface VariantManagerProps {
 export default function VariantManager({
   variants,
   onChange,
-  defaultPrice,
+  defaultPrices,
   availableSizes,
   availableColors,
 }: VariantManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  
+  // Initialize prices for all currencies
+  const initializeVariantPrices = (existingPrices?: ProductPrice[]): ProductPrice[] => {
+    return availableCurrencies.map(currency => {
+      const existing = existingPrices?.find(p => p.currency === currency.code);
+      return existing || {
+        currency: currency.code,
+        price: 0,
+        compareAtPrice: 0,
+        discountPercent: 0
+      };
+    });
+  };
+
   const [formData, setFormData] = useState<Partial<ProductVariant>>({
     size: "",
     color: undefined,
     sku: "",
-    price: undefined,
+    prices: initializeVariantPrices(),
     stockCount: 0,
     inStock: true,
   });
@@ -70,7 +86,7 @@ export default function VariantManager({
       size: "",
       color: undefined,
       sku: "",
-      price: undefined,
+      prices: initializeVariantPrices(),
       stockCount: 0,
       inStock: true,
     });
@@ -83,11 +99,59 @@ export default function VariantManager({
       size: variant.size || "",
       color: variant.color || undefined,
       sku: variant.sku,
-      price: variant.price,
+      prices: initializeVariantPrices(variant.prices),
       stockCount: variant.stockCount,
       inStock: variant.inStock,
     });
     setIsDialogOpen(true);
+  };
+
+  // Update price for a specific currency
+  const updateVariantPrice = (currencyCode: CurrencyCode, field: 'price' | 'compareAtPrice', value: number) => {
+    setFormData(prev => {
+      const updatedPrices = (prev.prices || []).map(p => {
+        if (p.currency === currencyCode) {
+          const updated = { ...p, [field]: value };
+          
+          // Calculate discount percent
+          if (updated.compareAtPrice && updated.compareAtPrice > 0 && updated.price > 0) {
+            updated.discountPercent = Math.round(
+              ((updated.compareAtPrice - updated.price) / updated.compareAtPrice) * 100
+            );
+          } else {
+            updated.discountPercent = 0;
+          }
+          
+          return updated;
+        }
+        return p;
+      });
+      
+      return { ...prev, prices: updatedPrices };
+    });
+  };
+
+  // Get price for a specific currency
+  const getVariantFormPrice = (currencyCode: CurrencyCode, field: 'price' | 'compareAtPrice'): number => {
+    const priceObj = formData.prices?.find(p => p.currency === currencyCode);
+    return priceObj?.[field] || 0;
+  };
+
+  // Get discount percent for a specific currency
+  const getVariantFormDiscountPercent = (currencyCode: CurrencyCode): number => {
+    const priceObj = formData.prices?.find(p => p.currency === currencyCode);
+    return priceObj?.discountPercent || 0;
+  };
+
+  // Get default price for a currency
+  const getDefaultPrice = (currencyCode: CurrencyCode): number => {
+    return defaultPrices.find(p => p.currency === currencyCode)?.price || 0;
+  };
+
+  // Get variant display price (uses variant price or falls back to default)
+  const getVariantDisplayPrice = (variant: ProductVariant, currencyCode: CurrencyCode): number => {
+    const variantPrice = variant.prices?.find(p => p.currency === currencyCode)?.price;
+    return variantPrice || getDefaultPrice(currencyCode);
   };
 
   const handleSave = () => {
@@ -97,12 +161,15 @@ export default function VariantManager({
       return;
     }
 
+    // Filter out prices that are 0 (means using default)
+    const filteredPrices = formData.prices?.filter(p => p.price > 0);
+
     const variantData: ProductVariant = {
       id: editingVariant?.id || generateVariantId(),
       size: formData.size || undefined,
       color: formData.color || undefined,
       sku: formData.sku || generateVariantSKU(formData.size, formData.color),
-      price: formData.price || undefined,
+      prices: filteredPrices && filteredPrices.length > 0 ? filteredPrices : undefined,
       stockCount: formData.stockCount || 0,
       inStock: formData.inStock ?? true,
     };
@@ -131,10 +198,6 @@ export default function VariantManager({
     return parts.join(" / ") || "Variant";
   };
 
-  const getVariantPrice = (variant: ProductVariant) => {
-    return variant.price || defaultPrice;
-  };
-
   const handleColorChange = (colorName: string) => {
     if (colorName === "none") {
       setFormData(prev => ({ ...prev, color: undefined }));
@@ -143,6 +206,9 @@ export default function VariantManager({
       setFormData(prev => ({ ...prev, color: selectedColor }));
     }
   };
+
+  // Get the default currency for display
+  const defaultCurrency = availableCurrencies.find(c => c.isDefault) || availableCurrencies[0];
 
   return (
     <Card>
@@ -161,9 +227,9 @@ export default function VariantManager({
                 Add Variant
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="font-body">
                   {editingVariant ? "Edit Variant" : "Add New Variant"}
                 </DialogTitle>
                 <DialogDescription>
@@ -175,6 +241,7 @@ export default function VariantManager({
               </DialogHeader>
 
               <div className="space-y-4 py-4">
+                {/* Size and Color Selection */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="size">Size</Label>
@@ -243,29 +310,95 @@ export default function VariantManager({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price (Optional)</Label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.price || ""}
-                      onChange={(e) => setFormData(prev => ({ 
-                        ...prev, 
-                        price: e.target.value ? parseFloat(e.target.value) : undefined 
-                      }))}
-                      placeholder={`${defaultPrice.toFixed(2)} (default)`}
-                      className="pl-10"
-                    />
+                <Separator />
+
+                {/* Multi-Currency Pricing */}
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base">Variant Pricing (Optional)</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Leave prices at 0 to use the default product prices
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Leave empty to use default price of ${defaultPrice.toFixed(2)}
-                  </p>
+
+                  {availableCurrencies.map((currency, index) => {
+                    const discountPercent = getVariantFormDiscountPercent(currency.code);
+                    const price = getVariantFormPrice(currency.code, 'price');
+                    const compareAtPrice = getVariantFormPrice(currency.code, 'compareAtPrice');
+                    const defaultPrice = getDefaultPrice(currency.code);
+                    const savings = compareAtPrice - price;
+                    
+                    return (
+                      <div key={currency.code} className="space-y-3">
+                        {index > 0 && <Separator />}
+                        
+                        <div className="flex items-center gap-2">
+                          <h4 className=" font-body font-semibold">{currency.name} ({currency.symbol})</h4>
+                          {currency.isDefault && (
+                            <Badge variant="secondary" className="text-xs">Default</Badge>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor={`variant-price-${currency.code}`}>
+                              Price ({currency.symbol})
+                            </Label>
+                            <Input
+                              id={`variant-price-${currency.code}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={price || ''}
+                              onChange={(e) => updateVariantPrice(
+                                currency.code,
+                                'price',
+                                parseFloat(e.target.value) || 0
+                              )}
+                              placeholder={`${defaultPrice.toFixed(2)} (default)`}
+                            />
+                            {price === 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Using default: {currency.symbol}{defaultPrice.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor={`variant-compareAtPrice-${currency.code}`}>
+                              Compare at Price ({currency.symbol})
+                            </Label>
+                            <Input
+                              id={`variant-compareAtPrice-${currency.code}`}
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={compareAtPrice || ''}
+                              onChange={(e) => updateVariantPrice(
+                                currency.code,
+                                'compareAtPrice',
+                                parseFloat(e.target.value) || 0
+                              )}
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+
+                        {discountPercent > 0 && price > 0 && (
+                          <div className="p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                            <p className="text-xs text-green-800 dark:text-green-200">
+                              💰 <strong>{discountPercent}% off</strong> - Save {currency.symbol}{savings.toFixed(2)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
 
+                <Separator />
+
+                {/* Stock Management */}
                 <div className="space-y-2">
                   <Label htmlFor="stockCount">Stock Count</Label>
                   <Input
@@ -321,62 +454,67 @@ export default function VariantManager({
           </div>
         ) : (
           <div className="space-y-3">
-            {variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    {variant.color && (
-                      <div 
-                        className="w-5 h-5 rounded-full border-2 border-foreground/20 shadow-sm flex-shrink-0"
-                        style={{ backgroundColor: variant.color.hex }}
-                        title={variant.color.name}
-                      />
-                    )}
-                    <span className="font-medium">{getVariantLabel(variant)}</span>
-                    {!variant.inStock && (
-                      <Badge variant="destructive" className="text-xs">
-                        Out of Stock
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>SKU: {variant.sku}</span>
-                    <span>•</span>
-                    <span className="font-medium text-foreground">
-                      ${getVariantPrice(variant).toFixed(2)}
-                      {!variant.price && (
-                        <span className="text-xs text-muted-foreground ml-1">
-                          (default)
-                        </span>
+            {variants.map((variant) => {
+              const displayPrice = getVariantDisplayPrice(variant, defaultCurrency.code);
+              const hasCustomPrice = variant.prices && variant.prices.length > 0;
+              
+              return (
+                <div
+                  key={variant.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      {variant.color && (
+                        <div 
+                          className="w-5 h-5 rounded-full border-2 border-foreground/20 shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: variant.color.hex }}
+                          title={variant.color.name}
+                        />
                       )}
-                    </span>
-                    <span>•</span>
-                    <span>Stock: {variant.stockCount}</span>
+                      <span className="font-medium">{getVariantLabel(variant)}</span>
+                      {!variant.inStock && (
+                        <Badge variant="destructive" className="text-xs">
+                          Out of Stock
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>SKU: {variant.sku}</span>
+                      <span>•</span>
+                      <span className="font-medium text-foreground">
+                        {defaultCurrency.symbol}{displayPrice.toFixed(2)}
+                        {!hasCustomPrice && (
+                          <span className="text-xs text-muted-foreground ml-1">
+                            (default) 
+                          </span>
+                        )}
+                      </span>
+                      <span>•</span>
+                      <span>Stock: {variant.stockCount}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      onClick={() => openEditDialog(variant)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(variant.id)}
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    onClick={() => openEditDialog(variant)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(variant.id)}
-                    type="button"
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

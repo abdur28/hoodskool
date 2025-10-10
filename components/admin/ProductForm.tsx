@@ -19,7 +19,8 @@ import CollectionSelector from "./CollectionSelector";
 import ImageUpload from "./ImageUpload";
 import VariantManager from "./VariantManager";
 import ColorPicker from "./ColorPicker";
-import { Color } from "@/types/types";
+import { Color, ProductPrice, CurrencyCode } from "@/types/types";
+import { availableCurrencies } from "@/constants";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -38,14 +39,26 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     loading 
   } = useAdmin();
   
+  // Initialize prices for all currencies
+  const initializePrices = (existingPrices?: ProductPrice[]): ProductPrice[] => {
+    return availableCurrencies.map(currency => {
+      const existing = existingPrices?.find(p => p.currency === currency.code);
+      return existing || {
+        currency: currency.code,
+        price: 0,
+        compareAtPrice: 0,
+        discountPercent: 0
+      };
+    });
+  };
+
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: product?.name || "",
     slug: product?.slug || "",
     description: product?.description || "",
     shortDescription: product?.shortDescription || "",
-    price: product?.price || 0,
-    compareAtPrice: product?.compareAtPrice || 0,
+    prices: initializePrices(product?.prices),
     categoryPath: product?.categoryPath || "",
     collectionSlug: product?.collectionSlug || "",
     sku: product?.sku || "",
@@ -106,10 +119,42 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
     }
   }, [formData.name, mode]);
 
-  // Calculate discount percentage
-  const discountPercent = formData.compareAtPrice && formData.price
-    ? Math.round(((formData.compareAtPrice - formData.price) / formData.compareAtPrice) * 100)
-    : 0;
+  // Update price for a specific currency
+  const updatePrice = (currencyCode: CurrencyCode, field: 'price' | 'compareAtPrice', value: number) => {
+    setFormData(prev => {
+      const updatedPrices = prev.prices.map(p => {
+        if (p.currency === currencyCode) {
+          const updated = { ...p, [field]: value };
+          
+          // Calculate discount percent
+          if (updated.compareAtPrice && updated.compareAtPrice > 0 && updated.price > 0) {
+            updated.discountPercent = Math.round(
+              ((updated.compareAtPrice - updated.price) / updated.compareAtPrice) * 100
+            );
+          } else {
+            updated.discountPercent = 0;
+          }
+          
+          return updated;
+        }
+        return p;
+      });
+      
+      return { ...prev, prices: updatedPrices };
+    });
+  };
+
+  // Get price for a specific currency
+  const getPrice = (currencyCode: CurrencyCode, field: 'price' | 'compareAtPrice'): number => {
+    const priceObj = formData.prices.find(p => p.currency === currencyCode);
+    return priceObj?.[field] || 0;
+  };
+
+  // Get discount percent for a specific currency
+  const getDiscountPercent = (currencyCode: CurrencyCode): number => {
+    const priceObj = formData.prices.find(p => p.currency === currencyCode);
+    return priceObj?.discountPercent || 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -127,13 +172,21 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
       toast.error("Please upload at least one product image");
       return;
     }
-    if (formData.price <= 0) {
-      toast.error("Price must be greater than 0");
+    
+    // Validate that at least one currency has a price
+    const hasValidPrice = formData.prices.some(p => p.price > 0);
+    if (!hasValidPrice) {
+      toast.error("At least one currency must have a price greater than 0");
       return;
     }
-    if (formData.compareAtPrice && formData.compareAtPrice > 0 && formData.price > formData.compareAtPrice) {
-      toast.error("Price cannot be greater than compare at price");
-      return;
+    
+    // Validate price vs compareAtPrice for each currency
+    for (const priceObj of formData.prices) {
+      if (priceObj.compareAtPrice && priceObj.compareAtPrice > 0 && priceObj.price > priceObj.compareAtPrice) {
+        const currency = availableCurrencies.find(c => c.code === priceObj.currency);
+        toast.error(`${currency?.name || priceObj.currency}: Price cannot be greater than compare at price`);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -142,7 +195,6 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
         ...formData,
         images,
         variants: variants.length > 0 ? variants : [],
-        ...(discountPercent > 0  ? { discountPercent } : {}),
       };
 
       if (mode === "create") {
@@ -316,47 +368,81 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
             </CardContent>
           </Card>
 
-          {/* Pricing */}
+          {/* Pricing - Multi-Currency */}
           <Card>
             <CardHeader>
               <CardTitle>Default Pricing</CardTitle>
-              <CardDescription>Set default product pricing (can be overridden by variants)</CardDescription>
+              <CardDescription>Set default product pricing for each currency (can be overridden by variants)</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price ($) *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-                    required
-                  />
-                </div>
+            <CardContent className="space-y-6">
+              {availableCurrencies.map((currency, index) => {
+                const discountPercent = getDiscountPercent(currency.code);
+                const price = getPrice(currency.code, 'price');
+                const compareAtPrice = getPrice(currency.code, 'compareAtPrice');
+                const savings = compareAtPrice - price;
+                
+                return (
+                  <div key={currency.code} className="space-y-4">
+                    {index > 0 && <Separator />}
+                    
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-body font-semibold">{currency.name} ({currency.symbol})</h3>
+                      {currency.isDefault && (
+                        <Badge variant="secondary" className="text-xs">Default</Badge>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`price-${currency.code}`}>
+                          Price ({currency.symbol}) *
+                        </Label>
+                        <Input
+                          id={`price-${currency.code}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={price || ''}
+                          onChange={(e) => updatePrice(
+                            currency.code,
+                            'price',
+                            parseFloat(e.target.value) || 0
+                          )}
+                          placeholder="0.00"
+                          required
+                        />
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="compareAtPrice">Compare at Price ($)</Label>
-                  <Input
-                    id="compareAtPrice"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.compareAtPrice}
-                    onChange={(e) => setFormData(prev => ({ ...prev, compareAtPrice: parseFloat(e.target.value) || 0 }))}
-                  />
-                </div>
-              </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`compareAtPrice-${currency.code}`}>
+                          Compare at Price ({currency.symbol})
+                        </Label>
+                        <Input
+                          id={`compareAtPrice-${currency.code}`}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={compareAtPrice || ''}
+                          onChange={(e) => updatePrice(
+                            currency.code,
+                            'compareAtPrice',
+                            parseFloat(e.target.value) || 0
+                          )}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
 
-              {discountPercent !== 0 && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm text-green-800">
-                    💰 <strong>{discountPercent}% off</strong> - Customers save ${(formData.compareAtPrice - formData.price).toFixed(2)}
-                  </p>
-                </div>
-              )}
+                    {discountPercent > 0 && (
+                      <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                        <p className="text-sm text-green-800 dark:text-green-200">
+                          💰 <strong>{discountPercent}% off</strong> - Customers save {currency.symbol}{savings.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
 
@@ -364,7 +450,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
           <VariantManager
             variants={variants}
             onChange={setVariants}
-            defaultPrice={formData.price}
+            defaultPrices={formData.prices}
             availableSizes={formData.sizes}
             availableColors={formData.colors}
           />
@@ -438,8 +524,15 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.tags.map(tag => (
                     <Badge key={tag} variant="secondary" className="gap-1">
                       {tag}
-                      <Button type="button" onClick={() => removeTag(tag)} variant="ghost">
-                        <X className="h-3 w-3 cursor-pointer text-red-500" />
+                      <Button
+                        type="button"
+                        variant={'ghost'}
+                        onClick={() => removeTag(tag)}
+                      >
+                      <X 
+                        className="h-3 w-3 cursor-pointer text-red-500 hover:text-red-700" 
+                        onClick={() => removeTag(tag)}
+                      />
                       </Button>
                     </Badge>
                   ))}
@@ -448,7 +541,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
 
               <Separator />
 
-              {/* Colors - Now using ColorPicker */}
+              {/* Colors */}
               <ColorPicker
                 colors={formData.colors}
                 onChange={(colors) => setFormData(prev => ({ ...prev, colors }))}
@@ -474,8 +567,15 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.sizes.map(size => (
                     <Badge key={size} variant="secondary" className="gap-1">
                       {size}
-                      <Button type="button" onClick={() => removeSize(size)} variant="ghost">
-                        <X className="h-3 w-3 cursor-pointer text-red-500" />
+                      <Button
+                        type="button"
+                        variant={'ghost'}
+                        onClick={() => removeSize(size)}
+                      >
+                      <X 
+                        className="h-3 w-3 cursor-pointer text-red-500 hover:text-red-700" 
+                        onClick={() => removeSize(size)}
+                      />
                       </Button>
                     </Badge>
                   ))}
@@ -502,8 +602,15 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
                   {formData.materials.map(material => (
                     <Badge key={material} variant="secondary" className="gap-1">
                       {material}
-                      <Button type="button" onClick={() => removeMaterial(material)} variant="ghost">
-                        <X className="h-3 w-3 cursor-pointer text-red-500" />
+                      <Button
+                        type="button"
+                        variant={'ghost'}
+                        onClick={() => removeMaterial(material)}
+                      >
+                      <X 
+                        className="h-3 w-3 cursor-pointer text-red-500 hover:text-red-700" 
+                        onClick={() => removeMaterial(material)}
+                      />
                       </Button>
                     </Badge>
                   ))}

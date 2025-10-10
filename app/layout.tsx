@@ -9,6 +9,7 @@ import Image from "next/image";
 import { AuthProvider } from "@/contexts/AuthContext";
 import CartInitializerContext from "@/contexts/CartInitializerContext";
 import { Toaster } from 'sonner'
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 
 
 const bebasNeue = Bebas_Neue({
@@ -45,29 +46,31 @@ export default function RootLayout({
       <body
         className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
       >
-        <AuthProvider>
-          <CartInitializerContext />
-          <SmoothScrollProvider>
-            <ConditionalNavbar />
-            
-            {/* Skull Watermark */}
-            <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
-              <div className="relative w-[60vw] h-[60vw] md:w-[50vw] md:h-[50vw] lg:w-[40vw] lg:h-[40vw] opacity-[2.5%]">
-                <Image
-                  src="/skull.svg"
-                  alt=""
-                  fill
-                  className="object-contain select-none"
-                  priority
-                />
+        <CurrencyProvider>
+          <AuthProvider>
+            <CartInitializerContext />
+            <SmoothScrollProvider>
+              <ConditionalNavbar />
+              
+              {/* Skull Watermark */}
+              <div className="fixed inset-0 z-30 flex items-center justify-center pointer-events-none">
+                <div className="relative w-[60vw] h-[60vw] md:w-[50vw] md:h-[50vw] lg:w-[40vw] lg:h-[40vw] opacity-[2.5%]">
+                  <Image
+                    src="/skull.svg"
+                    alt=""
+                    fill
+                    className="object-contain select-none"
+                    priority
+                  />
+                </div>
               </div>
-            </div>
 
-            {children}
-            <Toaster richColors/>
-            <Footer />
-          </SmoothScrollProvider>
-        </AuthProvider>
+              {children}
+              <Toaster richColors/>
+              <Footer />
+            </SmoothScrollProvider>
+          </AuthProvider>
+        </CurrencyProvider>
       </body>
     </html>
   );

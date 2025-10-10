@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import type { ProductVariant, Color } from "@/types/types";
 
@@ -34,10 +34,10 @@ export default function VariantSelector({
         (!selectedColor || v.color?.name === selectedColor)
     );
 
-    if (matchingVariant) {
+    if (matchingVariant && matchingVariant.id !== selectedVariant?.id) {
       onVariantChange(matchingVariant);
     }
-  }, [selectedSize, selectedColor, variants, onVariantChange]);
+  }, [selectedSize, selectedColor, variants]); // Removed onVariantChange and selectedVariant from dependencies
 
   // Get available options based on current selection
   const getAvailableSizes = () => {
@@ -68,7 +68,6 @@ export default function VariantSelector({
   };
 
   const isColorAvailable = (color: Color) => {
-    console.log(color, variants);
     if (!selectedSize) {
       return variants.some((v) => v.color?.name === color.name && v.inStock);
     }
@@ -236,6 +235,7 @@ export default function VariantSelector({
                 : `Only ${selectedVariant.stockCount} left in stock`
               : "Out of stock"}
           </span>
+          
         </motion.div>
       )}
     </motion.div>

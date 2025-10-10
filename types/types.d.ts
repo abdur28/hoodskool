@@ -4,6 +4,7 @@ import { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'user' | 'admin';
 export type SignInMethod = 'email' | 'google';
+export type CurrencyCode = 'rub' | 'usd';
 
 export interface UserProfile {
   uid: string;
@@ -92,7 +93,7 @@ export interface ProductVariant {
   size?: string;
   color?: Color;
   sku: string;
-  price?: number;
+  prices?: ProductPrice[];
   stockCount: number;
   inStock: boolean;
   imagePublicIds?: string[];
@@ -105,10 +106,8 @@ export interface Product {
   slug: string;
   description: string;
   shortDescription?: string;
-  
-  price: number;
-  compareAtPrice?: number;
-  discountPercent?: number;
+
+  prices?:  ProductPrice[];
   
   itemType?: string;
   categoryPath: string; // Category path e.g. "Clothing > Tops"
@@ -184,6 +183,20 @@ export interface Color {
   hex: string;
 }
 
+export interface Currency {
+    name: string;
+    code: CurrencyCode;
+    symbol: string;
+    isDefault?: boolean
+}
+
+export interface ProductPrice {
+  currency: CurrencyCode;
+  price: number;
+  compareAtPrice?: number;
+  discountPercent?: number;
+}
+
 
 // ============ CART TYPES ============
 
@@ -193,7 +206,7 @@ export interface CartItem {
   variantId?: string;
   name: string;
   slug: string;
-  price: number;
+  prices: ProductPrice[];
   quantity: number;
   image: string;
   
@@ -203,6 +216,7 @@ export interface CartItem {
   
   inStock: boolean;
   maxQuantity: number;
+  currentPrice?: number;
 }
 
 export interface Cart {

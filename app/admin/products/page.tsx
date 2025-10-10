@@ -60,7 +60,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Product } from "@/types/admin";
+import { CurrencyCode } from "@/types/types";
 import useAdmin from "@/hooks/admin/useAdmin";
+import { availableCurrencies } from "@/constants";
 
 export default function AdminProductsPage() {
   const {
@@ -75,11 +77,15 @@ export default function AdminProductsPage() {
     resetProducts
   } = useAdmin();
 
+  // Get default currency
+  const defaultCurrency = availableCurrencies.find(c => c.isDefault) || availableCurrencies[0];
+
   // State variables
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [stockFilter, setStockFilter] = useState<string>("all");
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(defaultCurrency.code);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [processingAction, setProcessingAction] = useState(false);
   
@@ -183,11 +189,18 @@ export default function AdminProductsPage() {
     setDeleteDialogOpen(true);
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
+  // Get price for a specific currency from product
+  const getProductPrice = (product: Product, currencyCode: CurrencyCode, field: 'price' | 'compareAtPrice'): number => {
+    const priceObj = product.prices?.find(p => p.currency === currencyCode);
+    return priceObj?.[field] || 0;
+  };
+
+  // Format price with currency
+  const formatPrice = (amount: number, currencyCode: CurrencyCode) => {
+    const currency = availableCurrencies.find(c => c.code === currencyCode);
+    if (!currency) return `${amount.toFixed(2)}`;
+    
+    return `${currency.symbol}${amount.toFixed(2)}`;
   };
 
   const getStockBadge = (product: Product) => {
@@ -195,13 +208,18 @@ export default function AdminProductsPage() {
       return <Badge variant="destructive">Out of Stock</Badge>;
     }
     if (product.totalStock < (product.lowStockAlert || 10)) {
-      return <Badge className="bg-yellow-100 text-yellow-800">Low Stock</Badge>;
+      return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">Low Stock</Badge>;
     }
-    return <Badge className="bg-green-100 text-green-800">In Stock</Badge>;
+    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">In Stock</Badge>;
   };
 
   // Get unique category paths from products
   const uniqueCategories = Array.from(new Set(products.map(p => p.categoryPath))).filter(Boolean);
+
+  // Get currency symbol for display
+  const getCurrentCurrencySymbol = () => {
+    return availableCurrencies.find(c => c.code === selectedCurrency)?.symbol || '$';
+  };
 
   // Loading state
   if (loading.products && !refreshing && products.length === 0) {
@@ -292,7 +310,21 @@ export default function AdminProductsPage() {
 
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {/* Currency Selector */}
+          <Select value={selectedCurrency} onValueChange={(value) => setSelectedCurrency(value as CurrencyCode)}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableCurrencies.map(currency => (
+                <SelectItem key={currency.code} value={currency.code}>
+                  {currency.symbol} {currency.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="All Categories" />
@@ -390,83 +422,97 @@ export default function AdminProductsPage() {
                 <TableHead className="w-[80px]">Image</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>Price ({getCurrentCurrencySymbol()})</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell>
-                    {product.images?.[0] ? (
-                      <Image
-                        src={product.images[0].secureUrl}
-                        alt={product.name}
-                        width={60}
-                        height={60}
-                        className="rounded object-cover"
-                      />
-                    ) : (
-                      <div className="w-[60px] h-[60px] bg-muted rounded flex items-center justify-center">
-                        <Package className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-xs text-muted-foreground">SKU: {product.sku}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm">{product.categoryPath}</span>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{formatPrice(product.price)}</div>
-                      {product.compareAtPrice && (
-                        <div className="text-xs text-muted-foreground line-through">
-                          {formatPrice(product.compareAtPrice)}
+              {filteredProducts.map((product) => {
+                const price = getProductPrice(product, selectedCurrency, 'price');
+                const compareAtPrice = getProductPrice(product, selectedCurrency, 'compareAtPrice');
+                const priceObj = product.prices?.find(p => p.currency === selectedCurrency);
+                const discountPercent = priceObj?.discountPercent || 0;
+
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      {product.images?.[0] ? (
+                        <Image
+                          src={product.images[0].secureUrl}
+                          alt={product.name}
+                          width={60}
+                          height={60}
+                          className="rounded object-cover"
+                        />
+                      ) : (
+                        <div className="w-[60px] h-[60px] bg-muted rounded flex items-center justify-center">
+                          <Package className="h-6 w-6 text-muted-foreground" />
                         </div>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">{product.totalStock} units</div>
-                  </TableCell>
-                  <TableCell>
-                    {getStockBadge(product)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem 
-                          onClick={() => window.location.href = `/admin/products/${product.id}`}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => openDeleteDialog(product)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-xs text-muted-foreground">SKU: {product.sku}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{product.categoryPath}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <div className="font-medium">
+                          {formatPrice(price, selectedCurrency)}
+                          {discountPercent > 0 && (
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              -{discountPercent}%
+                            </Badge>
+                          )}
+                        </div>
+                        {compareAtPrice > 0 && (
+                          <div className="text-xs text-muted-foreground line-through">
+                            {formatPrice(compareAtPrice, selectedCurrency)}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">{product.totalStock} units</div>
+                    </TableCell>
+                    <TableCell>
+                      {getStockBadge(product)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem 
+                            onClick={() => window.location.href = `/admin/products/${product.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => openDeleteDialog(product)}
+                            className="text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

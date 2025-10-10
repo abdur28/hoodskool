@@ -8,6 +8,7 @@ import DesktopNavigation from '@/components/navbar/DesktopNavigation';
 import CartSheet from '@/components/cart/CartSheet';
 import { useCartCount } from '@/hooks/useCart';
 import { motion, AnimatePresence } from 'framer-motion';
+import CurrencySwitcher from '../CurrencySwitcher';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -96,6 +97,7 @@ export default function Navbar() {
                   )}
                 </AnimatePresence>
               </button>
+               <CurrencySwitcher variant="ghost" size="sm" /> {/* remove and add to footer */}
             </div>
           </div>
         </div>
