@@ -227,7 +227,7 @@ export default function AdminProductsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold font-body tracking-tight">Products</h1>
+            <h1 className="text-2xl font-bold font-heading uppercase tracking-tight">Products</h1>
             <p className="text-muted-foreground">
               Manage your product catalog.
             </p>
@@ -247,7 +247,7 @@ export default function AdminProductsPage() {
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-body font-bold tracking-tight">Products</h1>
+          <h1 className="text-2xl font-heading uppercase font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">
             Manage your hoodskool product catalog.
           </p>

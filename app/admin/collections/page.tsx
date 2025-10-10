@@ -82,7 +82,7 @@ export default function AdminCollectionsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold font-body">Collections</h1>
+          <h1 className="text-2xl font-bold font-heading uppercase">Collections</h1>
           <p className="text-muted-foreground">Manage product collections</p>
         </div>
         <div className="flex gap-2">

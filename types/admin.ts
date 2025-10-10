@@ -161,6 +161,120 @@ export interface AdminAnalytics {
   recentOrders: Order[];
 }
 
+// Add these types to your existing types/admin.ts file
+
+// ============ ADMIN MAILER TYPES ============
+
+export interface EmailRecipient {
+  id: string;
+  email: string;
+  displayName?: string;
+  firstName?: string;
+  preferences?: {
+    emailNotifications?: {
+      promotions?: boolean;
+      newArrivals?: boolean;
+      newsletter?: boolean;
+    };
+  };
+  createdAt: string;
+}
+
+export interface EmailCampaign {
+  id: string;
+  type: 'promotion' | 'new_arrivals' | 'newsletter' | 'custom';
+  subject: string;
+  recipients: string[]; // User IDs or emails
+  recipientCount: number;
+  successCount: number;
+  failedCount: number;
+  status: 'draft' | 'sending' | 'sent' | 'failed';
+  content?: string;
+  promoData?: {
+    title: string;
+    description: string;
+    discountCode?: string;
+    discountPercent?: number;
+    expiryDate?: string;
+  };
+  newsletterData?: {
+    headline: string;
+    content: string;
+    imageUrl?: string;
+    ctaText?: string;
+    ctaUrl?: string;
+  };
+  createdAt: string;
+  sentAt?: string;
+}
+
+export interface EmailStats {
+  totalUsers: number;
+  totalOptedIn: number;
+  promotionsOptedIn: number;
+  newArrivalsOptedIn: number;
+  newsletterOptedIn: number;
+  totalCampaigns: number;
+  campaignsThisMonth: number;
+  emailsSentTotal: number;
+  emailsSentThisMonth: number;
+}
+
+// ============ ADMIN MAILER DATA STORE ============
+
+export interface AdminMailerDataStore {
+  // State
+  emailRecipients: EmailRecipient[];
+  emailCampaigns: EmailCampaign[];
+  emailStats: EmailStats | null;
+  
+  // Loading & Error states
+  loading: AdminLoadingState;
+  error: AdminErrorState;
+  
+  // Methods
+  fetchEmailRecipients: (emailType?: 'promotions' | 'newArrivals' | 'newsletter') => Promise<void>;
+  fetchEmailCampaigns: (options?: FetchOptions) => Promise<void>;
+  fetchEmailStats: () => Promise<void>;
+  sendPromotionEmail: (data: {
+    recipients: string[];
+    promoData: {
+      title: string;
+      description: string;
+      discountCode?: string;
+      discountPercent?: number;
+      expiryDate?: string;
+    };
+  }) => Promise<{ successCount: number; failedCount: number; results: any[] }>;
+  sendNewArrivalsEmail: (data: {
+    recipients: string[];
+    productIds: string[];
+  }) => Promise<{ successCount: number; failedCount: number; results: any[] }>;
+  sendNewsletterEmail: (data: {
+    recipients: string[];
+    newsletterData: {
+      subject: string;
+      headline: string;
+      content: string;
+      imageUrl?: string;
+      ctaText?: string;
+      ctaUrl?: string;
+    };
+  }) => Promise<{ successCount: number; failedCount: number; results: any[] }>;
+  resetMailer: () => void;
+}
+
+// Update AdminStore interface to include mailer
+export interface AdminStore extends 
+  AdminUserDataStore, 
+  AdminCategoryDataStore, 
+  AdminCollectionDataStore, 
+  AdminProductDataStore,
+  AdminMailerDataStore {
+  // Global methods
+  resetErrors: () => void;
+}
+
 // ============ ADMIN STORE ============
 
 export interface AdminStore extends AdminUserDataStore, AdminCategoryDataStore, AdminCollectionDataStore, AdminProductDataStore {

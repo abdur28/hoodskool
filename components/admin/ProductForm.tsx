@@ -261,7 +261,7 @@ export default function ProductForm({ product, mode }: ProductFormProps) {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold font-body">
+            <h1 className="text-2xl font-bold font-heading uppercase">
               {mode === "create" ? "Create New Product" : "Edit Product"}
             </h1>
             <p className="text-muted-foreground">

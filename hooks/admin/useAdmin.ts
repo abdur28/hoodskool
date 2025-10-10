@@ -4,6 +4,7 @@ import useAdminUsersData from "./useAdminUsersData";
 import useAdminCategoriesData from "./useAdminCategoriesData";
 import useAdminProductsData from "./useAdminProductsData";
 import useAdminCollectionsData from "./useAdminCollectionsData";
+import useAdminMailer from "./useAdminMailer";
 
 /**
  * Main admin hook that combines all specialized admin hooks
@@ -15,6 +16,7 @@ const useAdmin = create<AdminStore>((set, get) => {
   const categoryDataState = useAdminCategoriesData.getState();
   const collectionDataState = useAdminCollectionsData.getState();
   const productDataState = useAdminProductsData.getState();
+  const mailerDataState = useAdminMailer.getState();
 
   // Helper function to wrap async methods to ensure direct updates to main store
   const wrapAsyncMethod = (method: Function, storeUpdater: Function) => {
@@ -73,6 +75,17 @@ const useAdmin = create<AdminStore>((set, get) => {
       return methods;
     }, {} as Record<string, any>);
 
+  // Wrap all mailer methods
+  const wrappedMailerMethods = Object.keys(mailerDataState)
+    .filter(key => typeof mailerDataState[key as keyof typeof mailerDataState] === 'function')
+    .reduce((methods, key) => {
+      methods[key] = wrapAsyncMethod(
+        mailerDataState[key as keyof typeof mailerDataState] as Function,
+        () => useAdminMailer.getState()
+      );
+      return methods;
+    }, {} as Record<string, any>);
+
   // Global reset errors function
   const resetErrors = () => {
     useAdminUsersData.setState(state => ({
@@ -86,6 +99,9 @@ const useAdmin = create<AdminStore>((set, get) => {
     }));
     useAdminProductsData.setState(state => ({
       error: { ...state.error, products: null, adminAction: null }
+    }));
+    useAdminMailer.setState(state => ({
+      error: { ...state.error, users: null, adminAction: null }
     }));
   };
 
@@ -118,16 +134,25 @@ const useAdmin = create<AdminStore>((set, get) => {
     set((currentState) => ({ ...currentState, ...stateWithoutMethods }));
   });
 
+  useAdminMailer.subscribe((state) => {
+    const stateWithoutMethods = Object.fromEntries(
+      Object.entries(state).filter(([_, value]) => typeof value !== 'function')
+    );
+    set((currentState) => ({ ...currentState, ...stateWithoutMethods }));
+  });
+
   // Create the combined store
   return {
     ...userDataState,
     ...categoryDataState,
     ...collectionDataState,
     ...productDataState,
+    ...mailerDataState,
     ...wrappedUserMethods,
     ...wrappedCategoryMethods,
     ...wrappedCollectionMethods,
     ...wrappedProductMethods,
+    ...wrappedMailerMethods,
     resetErrors,
   };
 });

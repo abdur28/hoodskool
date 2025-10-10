@@ -186,6 +186,19 @@ export async function getProductBySlug(slug: string) {
 }
 
 /**
+ * Get products by ids
+ */
+export async function getProductsByIds(productIds: string[]) {
+  const productsRef = collection(db, 'products');
+  const q = query(productsRef, where('__name__', 'in', productIds));
+  const snapshot = await getDocs(q);
+
+  const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+
+  return { products, error: null };
+}
+
+/**
  * Get featured products
  */
 export async function getFeaturedProducts(limitCount: number = 6) {

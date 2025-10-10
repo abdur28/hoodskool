@@ -165,7 +165,7 @@ export default function AdminCategoriesPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-body font-bold tracking-tight">Categories</h1>
+            <h1 className="text-2xl font-heading uppercase font-bold tracking-tight">Categories</h1>
             <p className="text-muted-foreground">
               Manage product categories for your store.
             </p>
@@ -195,7 +195,7 @@ export default function AdminCategoriesPage() {
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-body font-bold tracking-tight">Categories</h1>
+          <h1 className="text-2xl font-heading uppercase font-bold tracking-tight">Categories</h1>
           <p className="text-muted-foreground">
             Manage product categories for your hoodskool store.
           </p>
