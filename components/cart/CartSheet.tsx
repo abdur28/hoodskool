@@ -6,15 +6,12 @@ import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
+import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING, TAX_RATE } from '@/constants';
 
 interface CartSheetProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const TAX_RATE = 0.08; // 8% tax
-const FREE_SHIPPING_THRESHOLD = 100;
-const STANDARD_SHIPPING = 10;
 
 export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
   const { user } = useAuth();
@@ -237,7 +234,7 @@ export default function CartSheet({ isOpen, onClose }: CartSheetProps) {
                     <span className="font-body font-medium">{formatPrice(cartTotals.subtotal)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-foreground/60">Tax (8%)</span>
+                    <span className="text-foreground/60">Tax ({TAX_RATE * 100}%)</span>
                     <span className="font-body font-medium">{formatPrice(cartTotals.tax)}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">

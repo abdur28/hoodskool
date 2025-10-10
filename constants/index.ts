@@ -17,3 +17,7 @@ export const availableCurrencies: Currency[] = [
 export async function getAvailableCurrencies() {
     return availableCurrencies;
 }
+
+export const TAX_RATE = 0.08; // 8% tax
+export const FREE_SHIPPING_THRESHOLD = 100;
+export const STANDARD_SHIPPING = 10;

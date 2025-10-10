@@ -62,8 +62,8 @@ export interface UserPreferences {
 }
 
 export interface Address {
-  id: string;
-  userId: string;
+  id?: string;
+  userId?: string;
   fullName: string;
   phone: string;
   street: string;
@@ -253,9 +253,10 @@ export interface OrderItem {
   name: string;
   sku: string;
   price: number;
+  currency: CurrencyCode;
   quantity: number;
   size?: string;
-  color?: string;
+  color?: Color;
   imageUrl: string;
 }
 
@@ -268,10 +269,11 @@ export interface Order {
   
   items: OrderItem[];
   
+  currency: CurrencyCode;
   subtotal: number;
-  tax: number;
-  shippingCost: number;
-  discount: number;
+  tax?: number;
+  shippingCost?: number;
+  discount?: number;
   total: number;
   
   status: OrderStatus;
@@ -297,6 +299,41 @@ export interface Order {
   shippedAt?: Timestamp;
   deliveredAt?: Timestamp;
   pickedUpAt?: Timestamp;
+}
+
+export interface CheckoutData {
+  deliveryType: DeliveryType;
+  email: string;
+  phone: string;
+  fullName: string;
+  shippingAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+}
+
+export interface CreateOrderData {
+  userId: string;
+  deliveryType: DeliveryType;
+  items: OrderItem[];
+  currency: CurrencyCode;
+  subtotal: number;
+  tax: number;
+  shippingCost: number;
+  total: number;
+  shippingAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  };
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
 }
 
 // ============ WISHLIST TYPES ============

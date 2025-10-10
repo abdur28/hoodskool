@@ -1,3 +1,4 @@
+// hooks/useCart.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { 
@@ -6,9 +7,12 @@ import {
   updateCartItemQuantity,
   removeFromCart as removeFromCartFirebase,
   clearCart as clearCartFirebase,
-  syncCart
+  syncCart,
+  getProduct
 } from '@/lib/products';
-import type { CartItem } from '@/types/types';
+import { createOrder } from '@/lib/orders';
+import type { CartItem, CheckoutData, CreateOrderData, CurrencyCode, DeliveryType } from '@/types/types';
+import { FREE_SHIPPING_THRESHOLD, STANDARD_SHIPPING, TAX_RATE } from '@/constants';
 
 interface CartState {
   // State
@@ -27,6 +31,7 @@ interface CartState {
   clearCart: (userId?: string) => Promise<void>;
   syncWithFirebase: (userId: string) => Promise<void>;
   removeDuplicates: () => void;
+  checkout: (userId: string, checkoutData: CheckoutData, currency: CurrencyCode) => Promise<{ success: boolean; orderId?: string; error?: string }>;
   
   // Internal helpers
   calculateItemCount: () => void;
@@ -348,6 +353,141 @@ export const useCart = create<CartState>()(
           console.log(`Removed ${items.length - deduplicatedItems.length} duplicate items`);
           set({ items: deduplicatedItems });
           get().calculateItemCount();
+        }
+      },
+
+      // Checkout function - verify prices and create order
+      checkout: async (userId: string, checkoutData: CheckoutData, currency: CurrencyCode) => {
+        const { items } = get();
+        
+        if (items.length === 0) {
+          return { success: false, error: 'Cart is empty' };
+        }
+
+        set({ isLoading: true });
+
+        try {
+          // Step 1: Verify prices with database
+          const verifiedItems = [];
+          
+          for (const item of items) {
+            // Fetch product from database
+            const { product, error } = await getProduct(item.productId);
+            
+            if (error || !product) {
+              set({ isLoading: false });
+              return { 
+                success: false, 
+                error: `Product ${item.name} not found or unavailable` 
+              };
+            }
+
+            // Get the correct price array (variant or product)
+            let pricesArray = product.prices || [];
+            if (item.variantId && product.variants) {
+              const variant = product.variants.find(v => v.id === item.variantId);
+              if (variant?.prices) {
+                pricesArray = variant.prices;
+              }
+            }
+
+            // Find price for current currency
+            const priceObj = pricesArray.find(p => p.currency === currency);
+            
+            if (!priceObj) {
+              set({ isLoading: false });
+              return { 
+                success: false, 
+                error: `Price not available for ${item.name} in selected currency` 
+              };
+            }
+
+            // Verify price matches
+            const cartPrice = item.prices.find(p => p.currency === currency);
+            if (!cartPrice || cartPrice.price !== priceObj.price) {
+              set({ isLoading: false });
+              return { 
+                success: false, 
+                error: `Price mismatch for ${item.name}. Please refresh your cart.` 
+              };
+            }
+
+            // Check stock availability
+            const availableStock = item.variantId 
+              ? product.variants?.find(v => v.id === item.variantId)?.stockCount || 0
+              : product.totalStock;
+
+            if (availableStock < item.quantity) {
+              set({ isLoading: false });
+              return { 
+                success: false, 
+                error: `Insufficient stock for ${item.name}. Only ${availableStock} available.` 
+              };
+            }
+
+            // Add verified item
+            verifiedItems.push({
+              id: item.id,
+              productId: item.productId,
+              ...(item.variantId ? { variantId: item.variantId } : {}),
+              name: item.name,
+              sku: item.sku,
+              price: priceObj.price,
+              currency: currency,
+              quantity: item.quantity,
+              ...(item.size ? { size: item.size } : {}),
+              ...(item.color ? { color: item.color } : {}),
+              imageUrl: item.image,
+            });
+          }
+
+          // Step 2: Calculate totals
+          const subtotal = verifiedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const tax = subtotal * TAX_RATE; 
+          const shippingCost = checkoutData.deliveryType === 'delivery' 
+            ? (subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING) 
+            : 0;
+          const total = subtotal + tax + shippingCost;
+
+          // Step 3: Create order
+          const orderData = {
+            userId,
+            deliveryType: checkoutData.deliveryType,
+            items: verifiedItems,
+            currency,
+            subtotal,
+            tax,
+            shippingCost,
+            total,
+            shippingAddress: checkoutData.shippingAddress,
+            customerName: checkoutData.fullName,
+            customerEmail: checkoutData.email,
+            customerPhone: checkoutData.phone,
+          } ;
+
+          const { orderId, error: orderError } = await createOrder(orderData);
+
+          if (orderError || !orderId) {
+            set({ isLoading: false });
+            return { 
+              success: false, 
+              error: orderError || 'Failed to create order' 
+            };
+          }
+
+          // Step 4: Clear cart after successful order
+          await get().clearCart(userId);
+
+          set({ isLoading: false });
+          return { success: true, orderId };
+
+        } catch (error: any) {
+          console.error('Checkout error:', error);
+          set({ isLoading: false });
+          return { 
+            success: false, 
+            error: error.message || 'Checkout failed' 
+          };
         }
       },
     }),

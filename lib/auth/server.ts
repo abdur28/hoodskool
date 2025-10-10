@@ -1,3 +1,4 @@
+// lib/auth/server.ts
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { adminAuth } from '@/lib/firebase/admin';
