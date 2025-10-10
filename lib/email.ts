@@ -16,6 +16,34 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+/**
+ * Get currency symbol from currency code
+ */
+export function getCurrencySymbol(currency: CurrencyCode): string {
+  const symbols: Record<CurrencyCode, string> = {
+    usd: '$',
+    rub: '₽'
+  };
+  return symbols[currency] || currency.toUpperCase();
+}
+
+/**
+ * Format price with currency
+ */
+export function formatPrice(price: number, currency: CurrencyCode): string {
+  const symbol = getCurrencySymbol(currency);
+  return `${symbol}${price.toFixed(2)}`;
+}
+
+// Update the handlebars helper registration to use the new function
+handlebars.registerHelper('formatPrice', function(price: number, currency: CurrencyCode) {
+  return formatPrice(price, currency);
+});
+
+handlebars.registerHelper('getCurrencySymbol', function(currency: CurrencyCode) {
+  return getCurrencySymbol(currency);
+});
+
 // Register Handlebars helpers
 handlebars.registerHelper('gt', function(a: number, b: number) {
   return a > b;
@@ -165,35 +193,6 @@ export async function sendOrderConfirmationEmail(
       shippingAddress: order.shippingAddress,
       trackOrderUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/track/${order.orderNumber}`,
       isOrderConfirmation: true
-    }
-  });
-}
-
-/**
- * Send order shipped notification
- */
-export async function sendOrderShippedEmail(
-  order: Order
-): Promise<boolean> {
-  const currencySymbol = order.currency === 'usd' ? '$' : '₽';
-  
-  return sendEmail({
-    to: order.customerEmail,
-    subject: `Your Order is On Its Way! #${order.orderNumber} - Hoodskool`,
-    templateName: 'order',
-    emailType: EmailType.ORDER_SHIPPED,
-    templateData: {
-      title: 'Your Order Has Shipped!',
-      orderNumber: order.orderNumber,
-      customerName: order.customerName,
-      items: order.items,
-      currency: order.currency,
-      currencySymbol,
-      trackingNumber: order.trackingNumber,
-      carrier: order.carrier,
-      shippingAddress: order.shippingAddress,
-      trackOrderUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/track/${order.orderNumber}`,
-      isOrderShipped: true
     }
   });
 }
@@ -351,18 +350,14 @@ export async function sendAdminOrderNotification(
   const currencySymbol = order.currency === 'usd' ? '$' : '₽';
   
   return sendEmail({
-    to: process.env.ADMIN_EMAIL || 'admin@hoodskool.com',
+    to: 'abdurrahmanidris235@gmail.com',
     subject: `New Order #${order.orderNumber} - ${currencySymbol}${order.total}`,
     templateName: 'order',
     emailType: EmailType.ADMIN_ORDER_NOTIFICATION,
     templateData: {
       title: '🎯 New Order Received!',
       orderNumber: order.orderNumber,
-      orderDate: order.createdAt.toDate().toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
+      orderDate: new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
       customerName: order.customerName,
       customerEmail: order.customerEmail,
       customerPhone: order.customerPhone,
@@ -378,6 +373,68 @@ export async function sendAdminOrderNotification(
       customerNotes: order.customerNotes,
       adminUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/admin/orders/${order.id}`,
       isAdminNotification: true
+    }
+  });
+}
+
+/**
+ * Send order delivered notification
+ */
+export async function sendOrderDeliveredEmail(
+  order: Order
+): Promise<boolean> {
+  const currencySymbol = getCurrencySymbol(order.currency);
+  
+  return sendEmail({
+    to: order.customerEmail,
+    subject: `Your Order Has Been Delivered! #${order.orderNumber} - Hoodskool`,
+    templateName: 'order',
+    emailType: EmailType.ORDER_DELIVERED,
+    templateData: {
+      title: 'Your Order Has Been Delivered!',
+      orderNumber: order.orderNumber,
+      orderDate: new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      customerName: order.customerName,
+      items: order.items,
+      currency: order.currency,
+      currencySymbol,
+      total: order.total,
+      deliveryType: order.deliveryType,
+      trackOrderUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/orders`,
+      isOrderDelivered: true,
+      // message: 'Thank you for shopping with Hoodskool! We hope you love your new items. Please let us know if you have any questions or concerns.'
+    }
+  });
+}
+
+/**
+ * Send order shipped notification
+ */
+export async function sendOrderShippedEmail(
+  order: Order
+): Promise<boolean> {
+  const currencySymbol = order.currency === 'usd' ? '$' : '₽';
+  
+  return sendEmail({
+    to: order.customerEmail,
+    subject: `Your Order is On Its Way! #${order.orderNumber} - Hoodskool`,
+    templateName: 'order',
+    emailType: EmailType.ORDER_SHIPPED,
+    templateData: {
+      title: 'Your Order Has Shipped!',
+      orderNumber: order.orderNumber,
+      orderDate: new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      customerName: order.customerName,
+      items: order.items,
+      currency: order.currency,
+      currencySymbol,
+      total: order.total,
+      trackingNumber: order.trackingNumber,
+      carrier: order.carrier,
+      shippingAddress: order.shippingAddress,
+      trackOrderUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/track/${order.orderNumber}`,
+      isOrderShipped: true,
+      // message: 'Thank you for shopping with Hoodskool! We hope you love your new items. Please let us know if you have any questions or concerns.'
     }
   });
 }

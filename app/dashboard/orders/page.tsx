@@ -1,299 +1,243 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Package, Truck, CheckCircle, XCircle, ChevronDown, Eye } from 'lucide-react';
-import Image from 'next/image';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useDashboard } from "@/hooks/useDashboard";
+import { Package, Loader2, ShoppingBag, Eye, Truck, CheckCircle2, Clock, XCircle, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { Order, OrderStatus } from "@/types/types";
+import { format } from "date-fns";
+import UserOrderDetailsDialog from "@/components/dashboard/UserOrderDetailsDialog";
 
-const mockOrders = [
-  {
-    id: '#HS-001',
-    date: '2025-10-05',
-    status: 'delivered',
-    total: '$185.00',
-    items: [
-      {
-        name: 'Classic Black Hoodie',
-        price: 75.00,
-        quantity: 1,
-        size: 'L',
-        image: '/banner/HoodSkool_банер правка.jpg',
-      },
-      {
-        name: 'Premium Leather Jacket',
-        price: 110.00,
-        quantity: 1,
-        size: 'L',
-        image: '/DSC05257 (1).jpg',
-      },
-    ],
-    shipping: {
-      address: '123 Street Name, City, State 12345',
-      method: 'Standard Shipping',
-      tracking: 'TRK123456789',
+const getOrderStatusConfig = (status: OrderStatus) => {
+  const configs: Record<OrderStatus, { 
+    icon: React.ReactNode; 
+    label: string;
+    gradient: string;
+  }> = {
+    pending: { 
+      icon: <Clock className="h-4 w-4" />, 
+      label: "Pending",
+      gradient: "from-yellow-500/10 to-orange-500/10 border-yellow-500/20"
     },
-  },
-  {
-    id: '#HS-002',
-    date: '2025-10-03',
-    status: 'shipped',
-    total: '$95.00',
-    items: [
-      {
-        name: 'Urban Denim Jeans',
-        price: 95.00,
-        quantity: 1,
-        size: '32',
-        image: '/HoodSkool_Catalog_0408202313209_resized.jpg',
-      },
-    ],
-    shipping: {
-      address: '123 Street Name, City, State 12345',
-      method: 'Express Shipping',
-      tracking: 'TRK987654321',
+    processing: { 
+      icon: <Package className="h-4 w-4" />, 
+      label: "Processing",
+      gradient: "from-blue-500/10 to-cyan-500/10 border-blue-500/20"
     },
-  },
-  {
-    id: '#HS-003',
-    date: '2025-09-28',
-    status: 'delivered',
-    total: '$145.00',
-    items: [
-      {
-        name: 'Vintage T-Shirt',
-        price: 45.00,
-        quantity: 2,
-        size: 'M',
-        image: '/HoodSkool_Catalog_0408202312555 1_resized.jpg',
-      },
-      {
-        name: 'Street Bucket Hat',
-        price: 35.00,
-        quantity: 1,
-        size: 'One Size',
-        image: '/HoodSkool_0408202445315 - Copy.jpg',
-      },
-    ],
-    shipping: {
-      address: '123 Street Name, City, State 12345',
-      method: 'Standard Shipping',
-      tracking: 'TRK456789123',
+    shipped: { 
+      icon: <Truck className="h-4 w-4" />, 
+      label: "Shipped",
+      gradient: "from-purple-500/10 to-pink-500/10 border-purple-500/20"
     },
-  },
-];
-
-const statusConfig = {
-  delivered: {
-    color: 'bg-green-500/10 text-green-700',
-    icon: CheckCircle,
-    label: 'Delivered',
-  },
-  shipped: {
-    color: 'bg-blue-500/10 text-blue-700',
-    icon: Truck,
-    label: 'Shipped',
-  },
-  processing: {
-    color: 'bg-yellow-500/10 text-yellow-700',
-    icon: Package,
-    label: 'Processing',
-  },
-  cancelled: {
-    color: 'bg-red-500/10 text-red-700',
-    icon: XCircle,
-    label: 'Cancelled',
-  },
+    delivered: { 
+      icon: <CheckCircle2 className="h-4 w-4" />, 
+      label: "Delivered",
+      gradient: "from-green-500/10 to-emerald-500/10 border-green-500/20"
+    },
+    cancelled: { 
+      icon: <XCircle className="h-4 w-4" />, 
+      label: "Cancelled",
+      gradient: "from-red-500/10 to-rose-500/10 border-red-500/20"
+    },
+    refunded: { 
+      icon: <XCircle className="h-4 w-4" />, 
+      label: "Refunded",
+      gradient: "from-gray-500/10 to-slate-500/10 border-gray-500/20"
+    }
+  };
+  
+  return configs[status];
 };
 
-export default function OrdersPage() {
-  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+const formatDate = (timestamp: any) => {
+  if (!timestamp) return 'N/A';
+  try {
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return format(date, 'MMM dd, yyyy');
+  } catch {
+    return 'Invalid date';
+  }
+};
 
-  const filteredOrders = filterStatus === 'all' 
-    ? mockOrders 
-    : mockOrders.filter(order => order.status === filterStatus);
+export default function DashboardOrdersPage() {
+  const { user } = useAuth();
+  const { fetchUserOrders, orders, isLoadingOrders, ordersError } = useDashboard();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  useEffect(() => {
+    if (user?.uid) {
+      fetchUserOrders(user.uid);
+    }
+  }, [user]);
+
+  const handleViewOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setDetailsOpen(true);
+  };
+
+  if (isLoadingOrders) {
+    return (
+      <div className="container max-w-5xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading your orders...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (ordersError) {
+    return (
+      <div className="container max-w-5xl mx-auto px-4 py-8">
+        <div className="border border-red-200 bg-red-50 dark:bg-red-950/10 rounded-xl p-8">
+          <div className="text-center text-red-600">
+            <XCircle className="h-12 w-12 mx-auto mb-4" />
+            <h3 className="text-lg font-body font-semibold mb-2">Failed to Load Orders</h3>
+            <p className="text-sm">{ordersError}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!orders || orders.length === 0) {
+    return (
+      <div className="container max-w-5xl mx-auto px-4 py-8">
+        <div className="min-h-[500px] flex items-center justify-center">
+          <div className="text-center max-w-md">
+            <div className="mb-6 relative">
+              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center">
+                <ShoppingBag className="h-12 w-12 text-primary" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold font-heading uppercase mb-3">No Orders Yet</h3>
+            <p className="text-muted-foreground mb-6">
+              Start shopping to see your order history here
+            </p>
+            <Button asChild size="lg">
+              <a href="/shop">
+                Browse Products
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="container">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="mb-8"
-      >
-        <h1 className="font-heading text-4xl md:text-5xl tracking-wider mb-2">
-          ORDERS
-        </h1>
-        <p className="font-body text-sm text-foreground/60">
-          View and track your order history
-        </p>
-      </motion.div>
+      <div className="mb-8">
+        <h1 className="text-5xl font-heading uppercase mb-2 ">My Orders</h1>
+      </div>
 
-      {/* Filter Tabs */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className="flex gap-2 mb-6 overflow-x-auto"
-      >
-        {['all', 'delivered', 'shipped', 'processing', 'cancelled'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilterStatus(status)}
-            className={`px-4 py-2 rounded-md font-body text-sm font-medium whitespace-nowrap transition-colors ${
-              filterStatus === status
-                ? 'bg-black text-white'
-                : 'bg-white border border-foreground/10 hover:border-[#F8E231]'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </button>
-        ))}
-      </motion.div>
-
-      {/* Orders List */}
-      <div className="space-y-4">
-        {filteredOrders.map((order, index) => {
-          const StatusIcon = statusConfig[order.status as keyof typeof statusConfig].icon;
-          const isExpanded = expandedOrder === order.id;
-
+      {/* Orders Grid */}
+      <div className="space-y-6 ">
+        {orders.map((order) => {
+          const statusConfig = getOrderStatusConfig(order.status);
+          
           return (
-            <motion.div
-              key={order.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
-              className="bg-white border border-foreground/10 rounded-lg overflow-hidden"
+            <div 
+              key={order.id} 
+              className="group relative bg-card border rounded-sm overflow-hidden hover:shadow-lg transition-all duration-300"
             >
-              {/* Order Header */}
-              <button
-                onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                className="w-full p-6 flex items-center justify-between hover:bg-foreground/5 transition-colors"
-              >
-                <div className="flex items-start gap-4 flex-1">
-                  <div className="p-2 bg-foreground/5 rounded-md">
-                    <StatusIcon className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="flex items-center gap-3 mb-1">
-                      <h3 className="font-body font-semibold">
-                        Order {order.id}
-                      </h3>
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusConfig[order.status as keyof typeof statusConfig].color}`}>
-                        {statusConfig[order.status as keyof typeof statusConfig].label}
-                      </span>
+              {/* Status Banner */}
+              <div className={`bg-gradient-to-r ${statusConfig.gradient} border-b px-6 py-4`}>
+                <div className="flex flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-background/80 backdrop-blur flex items-center justify-center">
+                      {statusConfig.icon}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-foreground/60">
-                      <span>{new Date(order.date).toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>{order.items.length} items</span>
-                      <span>•</span>
-                      <span className="font-semibold">{order.total}</span>
+                    <div>
+                      <p className="font-mono text-sm font-medium">#{order.orderNumber}</p>
+                      <p className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <Badge variant="outline" className="backdrop-blur-sm bg-background/80">
+                      {statusConfig.label}
+                    </Badge>
+                    <div className="text-right border-l pl-4">
+                      <p className="text-xs text-muted-foreground">Total</p>
+                      <p className="font-bold md:text-lg text-base">
+                        {order.currency.toUpperCase()} {order.total.toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <ChevronDown className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-              </button>
+              </div>
 
-              {/* Order Details */}
-              {isExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="border-t border-foreground/10"
-                >
-                  {/* Items */}
-                  <div className="p-6 space-y-4">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-4">
-                        <div className="relative w-16 h-16 bg-foreground/5 rounded-md overflow-hidden flex-shrink-0">
-                          <div className="w-full h-full flex items-center justify-center text-foreground/20 text-xs">
-                            IMAGE
-                          </div>
+              {/* Order Content */}
+              <div className="p-6">
+                {/* Items Grid */}
+                <div className="grid grid-cols-2  md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+                  {order.items.slice(0, 8).map((item) => (
+                    <div key={item.id} className="group/item relative">
+                      <div className="aspect-square relative rounded-xl overflow-hidden bg-muted mb-2">
+                        <Image 
+                          src={item.imageUrl} 
+                          alt={item.name} 
+                          fill 
+                          className="object-cover group-hover/item:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 right-2 bg-black/70 backdrop-blur text-white text-xs px-2 py-1 rounded-full">
+                          ×{item.quantity}
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-body font-semibold text-sm mb-1">
-                            {item.name}
-                          </h4>
-                          <div className="flex items-center gap-3 text-xs text-foreground/60">
-                            <span>Size: {item.size}</span>
-                            <span>•</span>
-                            <span>Qty: {item.quantity}</span>
-                          </div>
-                        </div>
-                        <span className="font-body font-semibold text-sm">
-                          ${item.price.toFixed(2)}
-                        </span>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Shipping Info */}
-                  <div className="p-6 bg-foreground/5 border-t border-foreground/10">
-                    <h4 className="font-body font-semibold text-sm mb-3">
-                      Shipping Information
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      <p className="text-foreground/60">
-                        <span className="font-medium text-foreground">Address:</span>{' '}
-                        {order.shipping.address}
+                      <p className="text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {order.currency.toUpperCase()} {item.price.toFixed(2)}
                       </p>
-                      <p className="text-foreground/60">
-                        <span className="font-medium text-foreground">Method:</span>{' '}
-                        {order.shipping.method}
-                      </p>
-                      {order.shipping.tracking && (
-                        <p className="text-foreground/60">
-                          <span className="font-medium text-foreground">Tracking:</span>{' '}
-                          {order.shipping.tracking}
-                        </p>
-                      )}
                     </div>
-                  </div>
+                  ))}
+                  
+                  {order.items.length > 4 && (
+                    <div className="aspect-square rounded-xl bg-muted flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">+{order.items.length - 4}</p>
+                        <p className="text-xs text-muted-foreground">more</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                  {/* Actions */}
-                  <div className="p-6 border-t border-foreground/10 flex gap-3">
-                    <button className="px-4 py-2 border border-foreground/20 hover:border-[#F8E231] transition-colors rounded-md font-body text-sm font-medium flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      View Details
-                    </button>
-                    {order.status === 'delivered' && (
-                      <button className="px-4 py-2 bg-black text-white hover:bg-[#F8E231] hover:text-black transition-colors rounded-md font-body text-sm font-medium">
-                        Buy Again
-                      </button>
-                    )}
-                    {order.status === 'shipped' && (
-                      <button className="px-4 py-2 bg-black text-white hover:bg-[#F8E231] hover:text-black transition-colors rounded-md font-body text-sm font-medium">
-                        Track Package
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
+                {/* Actions */}
+                <div className="flex justify-end gap-3">
+                  {order.trackingNumber && order.status === 'shipped' && (
+                    <Button variant="outline" size="lg">
+                      <Truck className="h-4 w-4 mr-2" />
+                      Track Package
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    onClick={() => handleViewOrder(order)}
+                    size="lg"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Full Order
+                  </Button>
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {/* Empty State */}
-      {filteredOrders.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center py-20 text-center"
-        >
-          <Package className="h-16 w-16 text-foreground/20 mb-4" />
-          <h2 className="font-heading text-2xl tracking-wider mb-2">
-            NO ORDERS FOUND
-          </h2>
-          <p className="font-body text-sm text-foreground/60">
-            No orders match the selected filter
-          </p>
-        </motion.div>
-      )}
+      <UserOrderDetailsDialog 
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        order={selectedOrder}
+      />
     </div>
   );
 }

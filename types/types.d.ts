@@ -58,7 +58,7 @@ export interface EmailNotifications {
 
 export interface UserPreferences {
   emailNotifications: EmailNotifications;
-  currency: string;
+  currency?: string;
 }
 
 export interface Address {
@@ -293,12 +293,12 @@ export interface Order {
   
   customerNotes?: string;
   
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-  paidAt?: Timestamp;
-  shippedAt?: Timestamp;
-  deliveredAt?: Timestamp;
-  pickedUpAt?: Timestamp;
+  createdAt: any;
+  updatedAt: any;
+  paidAt?: any;
+  shippedAt?: any;
+  deliveredAt?: any;
+  pickedUpAt?: any;
 }
 
 export interface CheckoutData {

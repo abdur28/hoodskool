@@ -4,15 +4,20 @@ import {
   removeFromWishlist as removeFromWishlistFirebase,
   getWishlist as getWishlistFirebase
 } from '@/lib/products';
+import { getUserOrders } from '@/lib/orders';
 import { updateUserProfile, getUserProfile, updateUserEmail, updateUserPassword } from '@/lib/firebase/auth';
-import type { Product, UserPreferences } from '@/types/types';
-
+import type { Product, UserPreferences, Order } from '@/types/types';
 
 interface DashboardState {
   // Wishlist state
   wishlist: string[];
   wishlistProducts: Product[];
   isLoadingWishlist: boolean;
+
+  // Orders state
+  orders: Order[];
+  isLoadingOrders: boolean;
+  ordersError: string | null;
 
   // Preferences state
   preferences: UserPreferences | null;
@@ -29,6 +34,11 @@ interface DashboardState {
   toggleWishlist: (productId: string, userId: string) => Promise<boolean>;
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => void;
+
+  // Orders actions
+  fetchUserOrders: (userId: string) => Promise<void>;
+  getOrderById: (orderId: string) => Order | undefined;
+  clearOrders: () => void;
 
   // Preferences actions
   loadPreferences: (userId: string) => Promise<void>;
@@ -59,6 +69,9 @@ export const useDashboard = create<DashboardState>((set, get) => ({
   wishlist: [],
   wishlistProducts: [],
   isLoadingWishlist: false,
+  orders: [],
+  isLoadingOrders: false,
+  ordersError: null,
   preferences: null,
   isLoadingPreferences: false,
   isSavingPreferences: false,
@@ -66,90 +79,7 @@ export const useDashboard = create<DashboardState>((set, get) => ({
   isSavingAddress: false,
   isUpdatingPassword: false,
 
-  // ... (keep all existing wishlist and preferences functions)
-
-  // Update user profile
-  updateProfile: async (data: { displayName?: string; phone?: string }) => {
-    set({ isSavingProfile: true });
-    
-    try {
-      const { error } = await updateUserProfile(data);
-      
-      if (error) {
-        set({ isSavingProfile: false });
-        return { success: false, error };
-      }
-
-      set({ isSavingProfile: false });
-      return { success: true };
-    } catch (error: any) {
-      set({ isSavingProfile: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Update shipping address
-  updateAddress: async (address: any) => {
-    set({ isSavingAddress: true });
-    
-    try {
-      const { error } = await updateUserProfile({ address });
-      
-      if (error) {
-        set({ isSavingAddress: false });
-        return { success: false, error };
-      }
-
-      set({ isSavingAddress: false });
-      return { success: true };
-    } catch (error: any) {
-      set({ isSavingAddress: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Change password
-  changePassword: async (currentPassword: string, newPassword: string) => {
-    set({ isUpdatingPassword: true });
-    
-    try {
-      // You'll need to implement this in your auth file
-      const { error } = await updateUserPassword(newPassword);
-      
-      if (error) {
-        set({ isUpdatingPassword: false });
-        return { success: false, error };
-      }
-
-      set({ isUpdatingPassword: false });
-      return { success: true };
-    } catch (error: any) {
-      set({ isUpdatingPassword: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Change email
-  changeEmail: async (newEmail: string) => {
-    set({ isSavingProfile: true });
-    
-    try {
-      const { error } = await updateUserEmail(newEmail);
-      
-      if (error) {
-        set({ isSavingProfile: false });
-        return { success: false, error };
-      }
-
-      set({ isSavingProfile: false });
-      return { success: true };
-    } catch (error: any) {
-      set({ isSavingProfile: false });
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Keep all existing functions (loadWishlist, toggleWishlist, etc.)
+  // ============ WISHLIST ACTIONS ============
   loadWishlist: async (userId: string) => {
     set({ isLoadingWishlist: true });
     
@@ -231,6 +161,49 @@ export const useDashboard = create<DashboardState>((set, get) => ({
     });
   },
 
+  // ============ ORDERS ACTIONS ============
+  fetchUserOrders: async (userId: string) => {
+    set({ isLoadingOrders: true, ordersError: null });
+    
+    try {
+      const { orders, error } = await getUserOrders(userId);
+      
+      if (error) {
+        console.error('Failed to fetch orders:', error);
+        set({ 
+          isLoadingOrders: false,
+          ordersError: error 
+        });
+        return;
+      }
+
+      set({ 
+        orders: orders || [],
+        isLoadingOrders: false,
+        ordersError: null
+      });
+    } catch (error: any) {
+      console.error('Fetch orders error:', error);
+      set({ 
+        isLoadingOrders: false,
+        ordersError: error.message || 'Failed to load orders'
+      });
+    }
+  },
+
+  getOrderById: (orderId: string) => {
+    return get().orders.find(order => order.id === orderId);
+  },
+
+  clearOrders: () => {
+    set({ 
+      orders: [],
+      isLoadingOrders: false,
+      ordersError: null
+    });
+  },
+
+  // ============ PREFERENCES ACTIONS ============
   loadPreferences: async (userId: string) => {
     set({ isLoadingPreferences: true });
     
@@ -300,6 +273,83 @@ export const useDashboard = create<DashboardState>((set, get) => ({
       isSavingPreferences: false
     });
   },
+
+  // ============ SETTINGS ACTIONS ============
+  updateProfile: async (data: { displayName?: string; phone?: string }) => {
+    set({ isSavingProfile: true });
+    
+    try {
+      const { error } = await updateUserProfile(data);
+      
+      if (error) {
+        set({ isSavingProfile: false });
+        return { success: false, error };
+      }
+
+      set({ isSavingProfile: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isSavingProfile: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  updateAddress: async (address: any) => {
+    set({ isSavingAddress: true });
+    
+    try {
+      const { error } = await updateUserProfile({ address });
+      
+      if (error) {
+        set({ isSavingAddress: false });
+        return { success: false, error };
+      }
+
+      set({ isSavingAddress: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isSavingAddress: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    set({ isUpdatingPassword: true });
+    
+    try {
+      const { error } = await updateUserPassword(newPassword);
+      
+      if (error) {
+        set({ isUpdatingPassword: false });
+        return { success: false, error };
+      }
+
+      set({ isUpdatingPassword: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isUpdatingPassword: false });
+      return { success: false, error: error.message };
+    }
+  },
+
+  changeEmail: async (newEmail: string) => {
+    set({ isSavingProfile: true });
+    
+    try {
+      const { error } = await updateUserEmail(newEmail);
+      
+      if (error) {
+        set({ isSavingProfile: false });
+        return { success: false, error };
+      }
+
+      set({ isSavingProfile: false });
+      return { success: true };
+    } catch (error: any) {
+      set({ isSavingProfile: false });
+      return { success: false, error: error.message };
+    }
+  },
 }));
 
 // Helper hooks
@@ -317,4 +367,12 @@ export const usePreferences = () => {
 
 export const useCurrency = () => {
   return useDashboard(state => state.preferences?.currency || 'rub');
+};
+
+export const useUserOrders = () => {
+  return useDashboard(state => ({
+    orders: state.orders,
+    isLoading: state.isLoadingOrders,
+    error: state.ordersError
+  }));
 };

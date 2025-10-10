@@ -12,7 +12,6 @@ const navigationItems = [
   { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Orders', href: '/dashboard/orders', icon: Package },
   { name: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
-  { name: 'Payment', href: '/dashboard/payment', icon: CreditCard },
   { name: 'Preferences', href: '/dashboard/preferences', icon: Sliders },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];

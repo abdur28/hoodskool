@@ -16,6 +16,9 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard, usePreferences } from '@/hooks/useDashboard';
 import { toast } from 'sonner';
+import { useCurrency } from '@/contexts/CurrencyContext';
+import { availableCurrencies } from '@/constants';
+import { CurrencyCode } from '@/types/types';
 
 export default function PreferencesPage() {
   const { user, refetch } = useAuth();
@@ -30,13 +33,12 @@ export default function PreferencesPage() {
     newsletter: true,
   });
 
-  const [currency, setCurrency] = useState('rub');
+  const { selectedCurrency, setSelectedCurrency, currency } = useCurrency();
 
   // Load preferences when component mounts or preferences change
   useEffect(() => {
     if (storedPreferences) {
       setEmailNotifications(storedPreferences.emailNotifications);
-      setCurrency(storedPreferences.currency);
     }
   }, [storedPreferences]);
 
@@ -47,12 +49,15 @@ export default function PreferencesPage() {
     }
   }, [user, storedPreferences, loadPreferences]);
 
+  const handleCurrencyChange = (currencyCode: CurrencyCode) => {
+    setSelectedCurrency(currencyCode);
+  };
+
   const handleSavePreferences = async () => {
     if (!user) return;
     
     const preferences = {
       emailNotifications,
-      currency,
     };
 
     const result = await savePreferences(user.uid, preferences);
@@ -189,23 +194,19 @@ export default function PreferencesPage() {
               <Label htmlFor="currency" className="text-sm font-medium">
                 Display Currency
               </Label>
-              <Select value={currency} onValueChange={setCurrency}>
+              <Select value={currency.code} onValueChange={handleCurrencyChange}>
                 <SelectTrigger id="currency" className="w-full">
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="rub">
+                  {availableCurrencies.map((currency) => (
+                    <SelectItem value={currency.code} key={currency.code}>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">Russian Ruble</p>
-                      <p className="text-xs text-muted-foreground">RUB</p>  
+                      <p className="font-medium">{currency.name}</p>
+                      <p className="text-xs text-muted-foreground">{currency.code}</p>  
                     </div>
                   </SelectItem>
-                  <SelectItem value="usd">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">US Dollar</p>
-                      <p className="text-xs text-muted-foreground">USD</p>
-                    </div>
-                  </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

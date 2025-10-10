@@ -386,6 +386,13 @@
         Great news! Your Hoodskool order has been shipped and is heading your way. Hood approved. ✅
       </div>
       {{/if}}
+
+      {{#if isOrderDelivered}}
+      <h1>Your Order Has Been Delivered! 🎉</h1>
+      <div class="greeting">
+        Yo {{customerName}},<br><br>
+        We're so happy to let you know that your Hoodskool order has been delivered. 
+      {{/if}}
       
       {{#if isAdminNotification}}
       <h1>New Order Received! 💰</h1>
@@ -427,34 +434,41 @@
             {{/if}}
             <div class="item-quantity">Qty: {{this.quantity}}</div>
           </div>
-          <div class="item-price">{{currencySymbol}}{{this.price}}</div>
+          <div class="item-price">{{this.currency}}{{this.price}}</div>
         </div>
         {{/each}}
       </div>
       
       <!-- Summary -->
       <div class="summary">
+        {{#if subtotal}}
         <div class="summary-line">
           <span>Subtotal</span>
-          <span>{{currencySymbol}}{{subtotal}}</span>
+          <span class="summary-price">: {{currencySymbol}}{{subtotal}}</span>
         </div>
+        {{/if}}
         {{#if shippingCost}}
         <div class="summary-line">
           <span>Shipping</span>
-          <span>{{#if (eq shippingCost 0)}}FREE{{else}}{{currencySymbol}}{{shippingCost}}{{/if}}</span>
+          <span class="summary-price">: {{#if (eq shippingCost 0)}}FREE{{else}}{{currencySymbol}}{{shippingCost}}{{/if}}</span>
         </div>
         {{/if}}
         {{#if tax}}
         <div class="summary-line">
           <span>Tax</span>
-          <span>{{currencySymbol}}{{tax}}</span>
+          <span class="summary-price">: {{currencySymbol}}{{tax}}</span>
         </div>
         {{/if}}
         <div class="summary-line total">
           <span>TOTAL</span>
-          <span>{{currencySymbol}}{{total}}</span>
+          <span class="summary-price">: {{currencySymbol}}{{total}}</span>
         </div>
       </div>
+      <style>
+        .summary-price {
+          margin-left: 20px;
+        }
+      </style>
       
       <!-- Shipping Address -->
       {{#if shippingAddress}}

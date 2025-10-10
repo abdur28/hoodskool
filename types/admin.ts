@@ -1,4 +1,4 @@
-import { UserProfile, Order, Product, ProductImage, ProductVariant, Collection, BannerImage, Category } from './types';
+import { UserProfile, Order, Product, ProductImage, ProductVariant, Collection, BannerImage, Category, OrderStatus, PaymentStatus } from './types';
 
 // ============ ADMIN STORE TYPES ============
 
@@ -70,6 +70,26 @@ export interface AdminUserDataStore {
   toggleUserStatus: (userId: string, status: 'active' | 'inactive') => Promise<void>;
   assignUserRole: (userId: string, role: 'user' | 'admin') => Promise<void>;
   resetUsers: () => void;
+}
+
+// ============ ADMIN ORDER DATA STORE ============
+
+export interface AdminOrderDataStore {
+  // State
+  orders: Order[];
+  
+  // Loading & Error states
+  loading: AdminLoadingState;
+  error: AdminErrorState;
+  pagination: AdminPaginationState;
+  
+  // Methods
+  fetchOrders: (options?: FetchOptions) => Promise<void>;
+  getOrderById: (orderId: string) => Promise<Order | null>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  updatePaymentStatus: (orderId: string, status: PaymentStatus) => Promise<void>;
+  updateOrder: (orderId: string, data: Partial<Order>) => Promise<void>;
+  resetOrders: () => void;
 }
 
 // ============ ADMIN CATEGORY DATA STORE ============
@@ -160,8 +180,6 @@ export interface AdminAnalytics {
   
   recentOrders: Order[];
 }
-
-// Add these types to your existing types/admin.ts file
 
 // ============ ADMIN MAILER TYPES ============
 
@@ -264,9 +282,11 @@ export interface AdminMailerDataStore {
   resetMailer: () => void;
 }
 
-// Update AdminStore interface to include mailer
+// ============ ADMIN STORE ============
+
 export interface AdminStore extends 
   AdminUserDataStore, 
+  AdminOrderDataStore,
   AdminCategoryDataStore, 
   AdminCollectionDataStore, 
   AdminProductDataStore,
@@ -275,12 +295,5 @@ export interface AdminStore extends
   resetErrors: () => void;
 }
 
-// ============ ADMIN STORE ============
-
-export interface AdminStore extends AdminUserDataStore, AdminCategoryDataStore, AdminCollectionDataStore, AdminProductDataStore {
-  // Global methods
-  resetErrors: () => void;
-}
-
 // Re-export types for convenience
-export type { Product, ProductImage, ProductVariant, Collection, BannerImage };
+export type { Product, ProductImage, ProductVariant, Collection, BannerImage, Order, OrderStatus, PaymentStatus };

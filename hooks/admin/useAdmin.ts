@@ -4,6 +4,7 @@ import useAdminUsersData from "./useAdminUsersData";
 import useAdminCategoriesData from "./useAdminCategoriesData";
 import useAdminProductsData from "./useAdminProductsData";
 import useAdminCollectionsData from "./useAdminCollectionsData";
+import useAdminOrdersData from "./useAdminOrdersData";
 import useAdminMailer from "./useAdminMailer";
 
 /**
@@ -16,6 +17,7 @@ const useAdmin = create<AdminStore>((set, get) => {
   const categoryDataState = useAdminCategoriesData.getState();
   const collectionDataState = useAdminCollectionsData.getState();
   const productDataState = useAdminProductsData.getState();
+  const orderDataState = useAdminOrdersData.getState();
   const mailerDataState = useAdminMailer.getState();
 
   // Helper function to wrap async methods to ensure direct updates to main store
@@ -75,6 +77,17 @@ const useAdmin = create<AdminStore>((set, get) => {
       return methods;
     }, {} as Record<string, any>);
 
+  // Wrap all order data methods
+  const wrappedOrderMethods = Object.keys(orderDataState)
+    .filter(key => typeof orderDataState[key as keyof typeof orderDataState] === 'function')
+    .reduce((methods, key) => {
+      methods[key] = wrapAsyncMethod(
+        orderDataState[key as keyof typeof orderDataState] as Function,
+        () => useAdminOrdersData.getState()
+      );
+      return methods;
+    }, {} as Record<string, any>);
+
   // Wrap all mailer methods
   const wrappedMailerMethods = Object.keys(mailerDataState)
     .filter(key => typeof mailerDataState[key as keyof typeof mailerDataState] === 'function')
@@ -99,6 +112,9 @@ const useAdmin = create<AdminStore>((set, get) => {
     }));
     useAdminProductsData.setState(state => ({
       error: { ...state.error, products: null, adminAction: null }
+    }));
+    useAdminOrdersData.setState(state => ({
+      error: { ...state.error, orders: null, adminAction: null }
     }));
     useAdminMailer.setState(state => ({
       error: { ...state.error, users: null, adminAction: null }
@@ -134,6 +150,13 @@ const useAdmin = create<AdminStore>((set, get) => {
     set((currentState) => ({ ...currentState, ...stateWithoutMethods }));
   });
 
+  useAdminOrdersData.subscribe((state) => {
+    const stateWithoutMethods = Object.fromEntries(
+      Object.entries(state).filter(([_, value]) => typeof value !== 'function')
+    );
+    set((currentState) => ({ ...currentState, ...stateWithoutMethods }));
+  });
+
   useAdminMailer.subscribe((state) => {
     const stateWithoutMethods = Object.fromEntries(
       Object.entries(state).filter(([_, value]) => typeof value !== 'function')
@@ -147,11 +170,13 @@ const useAdmin = create<AdminStore>((set, get) => {
     ...categoryDataState,
     ...collectionDataState,
     ...productDataState,
+    ...orderDataState,
     ...mailerDataState,
     ...wrappedUserMethods,
     ...wrappedCategoryMethods,
     ...wrappedCollectionMethods,
     ...wrappedProductMethods,
+    ...wrappedOrderMethods,
     ...wrappedMailerMethods,
     resetErrors,
   };

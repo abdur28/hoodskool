@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Mail, ArrowRight, Instagram, Twitter, Facebook, Youtube } from "lucide-react";
 import CrossedLink from "@/components/ui/crossed-link";
 import { usePathname } from "next/navigation";
+import CurrencySwitcher from "../CurrencySwitcher";
 
 const footerLinks = {
   shop: [
@@ -156,6 +157,10 @@ export default function Footer() {
                   </a>
                 );
               })}
+            </div>
+            <div className="flex items-center gap-3 mt-4">
+                <span className="font-body text-sm text-white/70">Currency</span>
+                <CurrencySwitcher />  
             </div>
           </div>
 

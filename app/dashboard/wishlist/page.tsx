@@ -24,36 +24,6 @@ export default function WishlistPage() {
     }
   }, [user, loadWishlist]);
 
-  const handleAddAllToCart = async () => {
-    if (!user) return;
-
-    const inStockItems = wishlistProducts.filter(product => product.inStock);
-    
-    for (const product of inStockItems) {
-      const primaryImage = product.images.find(img => img.isPrimary) || product.images[0];
-      const firstVariant = product.variants?.[0];
-      
-      const cartItem: any = {
-        productId: product.id,
-        name: product.name,
-        slug: product.slug,
-        price: product.price,
-        quantity: 1,
-        image: primaryImage?.secureUrl || '/placeholder-product.jpg',
-        sku: product.sku,
-        inStock: product.inStock,
-        maxQuantity: product.totalStock,
-      };
-
-      if (firstVariant) {
-        if (firstVariant.id) cartItem.variantId = firstVariant.id;
-        if (firstVariant.size) cartItem.size = firstVariant.size;
-        if (firstVariant.color) cartItem.color = cartItem.color;
-      }
-
-      await addItem(cartItem, user.uid);
-    }
-  };
 
   // Show loading state
   if (authLoading || isLoadingWishlist) {
@@ -142,20 +112,20 @@ export default function WishlistPage() {
 
               <div className="relative z-10">
                 <h3 className="font-body font-semibold mb-1 text-white">
-                  Ready to purchase?
+                  Looking for more?
                 </h3>
                 <p className="font-body text-sm text-white/60">
                   {inStockCount} {inStockCount === 1 ? 'item' : 'items'} available in your wishlist
                 </p>
               </div>
               <div className="flex gap-3 relative z-10">
-                <button
-                  onClick={handleAddAllToCart}
+                <Link
+                  href="/clothings"
                   className="px-6 py-3 bg-[#F8E231] text-black hover:bg-white transition-colors rounded-md font-body text-sm font-medium flex items-center gap-2"
                 >
-                  Add All to Cart
+                  Shop Now
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </Link>
               </div>
             </motion.div>
           )}
