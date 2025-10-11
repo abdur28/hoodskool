@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import useAdmin from "@/hooks/admin/useAdmin";
 import { Badge } from "@/components/ui/badge";
 import { Category } from "@/types/types";
+import ImageUpload from "@/components/admin/ImageUpload";
+import { ProductImage } from "@/types/admin";
 
 interface CategoryDialogProps {
   open: boolean;
@@ -39,8 +41,10 @@ export default function CategoryDialog({
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
-    description: ''
+    description: '',
+    subtitle: ''
   });
+  const [bannerImages, setBannerImages] = useState<ProductImage[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState({
     name: '',
@@ -53,14 +57,32 @@ export default function CategoryDialog({
       setFormData({
         name: category.name,
         slug: category.slug,
-        description: category.description || ''
+        description: category.description || '',
+        subtitle: category.subtitle || ''
       });
+      
+      // Load existing banner image if present
+      if (category.bannerImage) {
+        setBannerImages([{
+          id: 'banner-1',
+          publicId: category.bannerImage.publicId,
+          url: category.bannerImage.url,
+          secureUrl: category.bannerImage.secureUrl,
+          altText: category.bannerImage.altText || '',
+          order: 0,
+          isPrimary: true
+        }]);
+      } else {
+        setBannerImages([]);
+      }
     } else if (open && mode === 'create') {
       setFormData({
         name: '',
         slug: '',
-        description: ''
+        description: '',
+        subtitle: ''
       });
+      setBannerImages([]);
     }
     setErrors({ name: '', slug: '' });
   }, [open, mode, category]);
@@ -112,15 +134,26 @@ export default function CategoryDialog({
     try {
       setIsSaving(true);
       
+      // Prepare category data with banner image
+      const categoryData: any = {
+        ...formData,
+        bannerImage: bannerImages.length > 0 ? {
+          publicId: bannerImages[0].publicId,
+          url: bannerImages[0].url,
+          secureUrl: bannerImages[0].secureUrl,
+          altText: bannerImages[0].altText || formData.name
+        } : undefined
+      };
+      
       if (mode === 'create') {
-        await createCategory(formData, parentCategory?.id);
+        await createCategory(categoryData, parentCategory?.id);
         toast.success(
           parentCategory 
             ? `Subcategory added to "${parentCategory.name}"` 
             : "Category created successfully"
         );
       } else if (mode === 'edit' && category) {
-        await updateCategory(category.id, formData, parentCategory?.id);
+        await updateCategory(category.id, categoryData, parentCategory?.id);
         toast.success("Category updated successfully");
       }
       
@@ -135,7 +168,7 @@ export default function CategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-body">
             {mode === 'create' 
@@ -166,6 +199,7 @@ export default function CategoryDialog({
         )}
 
         <div className="space-y-4 py-4">
+          {/* Name Field */}
           <div className="space-y-2">
             <Label htmlFor="name">
               Category Name <span className="text-red-500">*</span>
@@ -182,6 +216,24 @@ export default function CategoryDialog({
             )}
           </div>
 
+          {/* Subtitle Field */}
+          <div className="space-y-2">
+            <Label htmlFor="subtitle">Subtitle (Optional)</Label>
+            <Input
+              id="subtitle"
+              placeholder="e.g., Premium streetwear essentials"
+              value={formData.subtitle}
+              onChange={(e) => setFormData(prev => ({ 
+                ...prev, 
+                subtitle: e.target.value 
+              }))}
+            />
+            <p className="text-xs text-muted-foreground">
+              A short tagline or subtitle for this category
+            </p>
+          </div>
+
+          {/* Slug Field */}
           <div className="space-y-2">
             <Label htmlFor="slug">
               Slug <span className="text-red-500">*</span>
@@ -206,6 +258,7 @@ export default function CategoryDialog({
             )}
           </div>
 
+          {/* Description Field */}
           <div className="space-y-2">
             <Label htmlFor="description">Description (Optional)</Label>
             <Textarea
@@ -217,6 +270,19 @@ export default function CategoryDialog({
                 description: e.target.value 
               }))}
               rows={3}
+            />
+          </div>
+
+          {/* Banner Image Upload */}
+          <div className="space-y-2">
+            <Label>Banner Image (Optional)</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Upload a banner image for this category (displayed on category pages)
+            </p>
+            <ImageUpload
+              images={bannerImages}
+              onChange={setBannerImages}
+              maxImages={1}
             />
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from 'cloudinary';
+import sharp from 'sharp';
 import type { CloudinaryUploadResult } from '@/types/types';
 
 // Configure Cloudinary
@@ -10,6 +11,76 @@ cloudinary.config({
 });
 
 export { cloudinary };
+
+// Maximum file size in bytes (10MB)
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+/**
+ * Compress an image using sharp
+ * @param buffer - Buffer of the image
+ * @param maxSizeBytes - Maximum size in bytes
+ */
+async function compressImageBuffer(buffer: Buffer, maxSizeBytes: number = MAX_FILE_SIZE): Promise<Buffer> {
+  let quality = 90;
+  let compressed = buffer;
+  
+  // Get image metadata
+  const metadata = await sharp(buffer).metadata();
+  
+  // Start with resizing if image is very large
+  const originalWidth = metadata.width || 2000;
+  const originalHeight = metadata.height || 2000;
+  const maxDimension = 2000;
+  
+  let resizeOptions: { width?: number; height?: number } = {};
+  
+  if (originalWidth > maxDimension || originalHeight > maxDimension) {
+    if (originalWidth > originalHeight) {
+      resizeOptions.width = maxDimension;
+    } else {
+      resizeOptions.height = maxDimension;
+    }
+  }
+  
+  // Try compressing with decreasing quality
+  while (quality >= 20) {
+    let sharpInstance = sharp(buffer);
+    
+    if (resizeOptions.width || resizeOptions.height) {
+      sharpInstance = sharpInstance.resize(resizeOptions.width, resizeOptions.height, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      });
+    }
+    
+    compressed = await sharpInstance
+      .jpeg({ quality, mozjpeg: true })
+      .toBuffer();
+    
+    if (compressed.length <= maxSizeBytes) {
+      console.log(`Compressed to ${(compressed.length / 1024 / 1024).toFixed(2)}MB at quality ${quality}`);
+      break;
+    }
+    
+    quality -= 10;
+  }
+  
+  // If still too large, reduce dimensions more aggressively
+  if (compressed.length > maxSizeBytes) {
+    const scaleFactor = Math.sqrt(maxSizeBytes / compressed.length) * 0.95; // 0.9 for safety margin
+    const newWidth = Math.floor(originalWidth * scaleFactor);
+    const newHeight = Math.floor(originalHeight * scaleFactor);
+    
+    compressed = await sharp(buffer)
+      .resize(newWidth, newHeight, { fit: 'inside' })
+      .jpeg({ quality: 90, mozjpeg: true })
+      .toBuffer();
+    
+    console.log(`Further compressed with dimension reduction to ${(compressed.length / 1024 / 1024).toFixed(2)}MB`);
+  }
+  
+  return compressed;
+}
 
 /**
  * Upload an image to Cloudinary
@@ -30,7 +101,13 @@ export async function uploadImage(
   try {
     // Convert File to Buffer
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    let buffer: Buffer = Buffer.from(arrayBuffer);
+
+    // Check file size and compress if necessary
+    if (buffer.length > MAX_FILE_SIZE) {
+      console.log(`File size (${(buffer.length / 1024 / 1024).toFixed(2)}MB) exceeds 10MB limit. Compressing...`);
+      buffer = await compressImageBuffer(buffer, MAX_FILE_SIZE);
+    }
 
     // Upload to Cloudinary
     const result = await new Promise<any>((resolve, reject) => {

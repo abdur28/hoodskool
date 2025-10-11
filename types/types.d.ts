@@ -155,6 +155,8 @@ export  interface Category {
   name: string;
   slug: string;
   description?: string;
+  bannerImage?: BannerImage;
+  subtitle?: string;
   createdAt: any;
   updatedAt: any;
   subCategories?: Category[];
