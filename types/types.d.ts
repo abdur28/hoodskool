@@ -154,6 +154,7 @@ export  interface Category {
   id: string;
   name: string;
   slug: string;
+  path: string; // Category path e.g. "Clothing > Tops"
   description?: string;
   bannerImage?: BannerImage;
   subtitle?: string;
