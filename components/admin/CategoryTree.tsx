@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -27,33 +27,49 @@ import { Category } from "@/types/types";
 
 interface CategoryTreeProps {
   categories: Category[];
-  onEdit: (category: Category, parentId?: string) => void;
-  onDelete: (category: Category, parentId?: string) => void;
+  onEdit: (category: Category) => void;
+  onDelete: (category: Category) => void;
   onAddSubcategory: (parentCategory: Category) => void;
   searchQuery?: string;
 }
 
+interface TreeNode extends Category {
+  children: TreeNode[];
+  level: number;
+}
+
 interface CategoryTreeItemProps {
-  category: Category;
-  level?: number;
-  parentId?: string;
-  onEdit: (category: Category, parentId?: string) => void;
-  onDelete: (category: Category, parentId?: string) => void;
+  node: TreeNode;
+  allCategories: Category[];
+  onEdit: (category: Category) => void;
+  onDelete: (category: Category) => void;
   onAddSubcategory: (parentCategory: Category) => void;
   searchQuery?: string;
 }
 
 function CategoryTreeItem({ 
-  category, 
-  level = 0, 
-  parentId,
+  node,
+  allCategories,
   onEdit, 
   onDelete,
   onAddSubcategory,
   searchQuery 
 }: CategoryTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const hasSubcategories = category.subCategories && category.subCategories.length > 0;
+  const hasChildren = node.children.length > 0;
+
+  // Convert path to display format
+  const getDisplayPath = (path: string): string => {
+    return path
+      .split('/')
+      .map(segment => 
+        segment
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+      )
+      .join(' > ');
+  };
 
   // Highlight search matches
   const highlightText = (text: string) => {
@@ -78,14 +94,14 @@ function CategoryTreeItem({
       <div 
         className={cn(
           "flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors group",
-          level > 0 && "ml-6"
+          node.level > 0 && "ml-6"
         )}
       >
         {/* Drag Handle */}
         <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
         
         {/* Expand/Collapse Button */}
-        {hasSubcategories ? (
+        {hasChildren ? (
           <Button
             variant="ghost"
             size="sm"
@@ -103,7 +119,7 @@ function CategoryTreeItem({
         )}
 
         {/* Folder Icon */}
-        {isExpanded && hasSubcategories ? (
+        {isExpanded && hasChildren ? (
           <FolderOpen className="h-4 w-4 text-blue-500" />
         ) : (
           <Folder className="h-4 w-4 text-muted-foreground" />
@@ -113,21 +129,21 @@ function CategoryTreeItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm truncate">
-              {highlightText(category.name)}
+              {highlightText(node.name)}
             </span>
-            {hasSubcategories && (
+            {hasChildren && (
               <Badge variant="secondary" className="text-xs">
-                {category.subCategories!.length}
+                {node.children.length}
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-            <code className="text-xs text-muted-foreground">
-              {highlightText(category.slug)}
+            <code className="text-xs text-muted-foreground truncate">
+              {highlightText(node.path)}
             </code>
-            {level > 0 && (
+            {node.level > 0 && (
               <Badge variant="outline" className="text-xs">
-                Level {level + 1}
+                Level {node.level + 1}
               </Badge>
             )}
           </div>
@@ -139,7 +155,7 @@ function CategoryTreeItem({
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0"
-            onClick={() => onAddSubcategory(category)}
+            onClick={() => onAddSubcategory(node)}
             title="Add subcategory"
           >
             <Plus className="h-4 w-4" />
@@ -157,17 +173,17 @@ function CategoryTreeItem({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => onEdit(category, parentId)}>
+              <DropdownMenuItem onClick={() => onEdit(node)}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onAddSubcategory(category)}>
+              <DropdownMenuItem onClick={() => onAddSubcategory(node)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Subcategory
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
-                onClick={() => onDelete(category, parentId)}
+                onClick={() => onDelete(node)}
                 className="text-red-600"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -178,15 +194,14 @@ function CategoryTreeItem({
         </div>
       </div>
 
-      {/* Subcategories */}
-      {isExpanded && hasSubcategories && (
+      {/* Children */}
+      {isExpanded && hasChildren && (
         <div className="ml-3 border-l-2 border-muted">
-          {category.subCategories!.map((subCategory) => (
+          {node.children.map((childNode) => (
             <CategoryTreeItem
-              key={subCategory.id}
-              category={subCategory}
-              level={level + 1}
-              parentId={category.id}
+              key={childNode.id}
+              node={childNode}
+              allCategories={allCategories}
               onEdit={onEdit}
               onDelete={onDelete}
               onAddSubcategory={onAddSubcategory}
@@ -206,48 +221,84 @@ export default function CategoryTree({
   onAddSubcategory,
   searchQuery 
 }: CategoryTreeProps) {
-  if (categories.length === 0) {
+  // Build tree structure from flat categories using path
+  const categoryTree = useMemo(() => {
+    // Filter categories based on search first
+    let filteredCategories = categories;
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filteredCategories = categories.filter(cat => 
+        cat.name.toLowerCase().includes(query) ||
+        cat.slug.toLowerCase().includes(query) ||
+        cat.path.toLowerCase().includes(query) ||
+        (cat.description && cat.description.toLowerCase().includes(query))
+      );
+    }
+
+    // Build tree from paths
+    const buildTree = (cats: Category[]): TreeNode[] => {
+      // Sort by path to ensure parents come before children
+      const sortedCats = [...cats].sort((a, b) => a.path.localeCompare(b.path));
+      
+      // Create map for quick lookup
+      const nodeMap = new Map<string, TreeNode>();
+      
+      // First pass: create all nodes
+      sortedCats.forEach(cat => {
+        const level = cat.path.split('/').length - 1;
+        nodeMap.set(cat.path, {
+          ...cat,
+          children: [],
+          level
+        });
+      });
+      
+      // Second pass: build parent-child relationships
+      const rootNodes: TreeNode[] = [];
+      
+      sortedCats.forEach(cat => {
+        const node = nodeMap.get(cat.path)!;
+        const pathParts = cat.path.split('/');
+        
+        if (pathParts.length === 1) {
+          // Root level
+          rootNodes.push(node);
+        } else {
+          // Child level - find parent
+          const parentPath = pathParts.slice(0, -1).join('/');
+          const parentNode = nodeMap.get(parentPath);
+          
+          if (parentNode) {
+            parentNode.children.push(node);
+          } else {
+            // Parent not found (possibly filtered out), add to root
+            rootNodes.push(node);
+          }
+        }
+      });
+      
+      return rootNodes;
+    };
+    
+    return buildTree(filteredCategories);
+  }, [categories, searchQuery]);
+
+  if (categoryTree.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No categories to display
+        {searchQuery ? "No categories match your search" : "No categories to display"}
       </div>
     );
   }
 
-  // Filter categories based on search
-  const filterCategories = (cats: Category[]): Category[] => {
-    if (!searchQuery) return cats;
-
-    return cats.filter(cat => {
-      const matchesSearch = 
-        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cat.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (cat.description && cat.description.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      // If this category matches, include it
-      if (matchesSearch) return true;
-
-      // If any subcategory matches, include this category too
-      if (cat.subCategories && cat.subCategories.length > 0) {
-        const hasMatchingSubcategory = filterCategories(cat.subCategories).length > 0;
-        if (hasMatchingSubcategory) return true;
-      }
-
-      return false;
-    }).map(cat => ({
-      ...cat,
-      subCategories: cat.subCategories ? filterCategories(cat.subCategories) : []
-    }));
-  };
-
-  const filteredCategories = filterCategories(categories);
-
   return (
     <div className="space-y-1">
-      {filteredCategories.map((category) => (
+      {categoryTree.map((node) => (
         <CategoryTreeItem
-          key={category.id}
-          category={category}
+          key={node.id}
+          node={node}
+          allCategories={categories}
           onEdit={onEdit}
           onDelete={onDelete}
           onAddSubcategory={onAddSubcategory}

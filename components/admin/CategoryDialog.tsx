@@ -126,6 +126,27 @@ export default function CategoryDialog({
     return isValid;
   };
 
+  // Calculate the full path that will be created
+  const getFullPath = (): string => {
+    if (parentCategory) {
+      return `${parentCategory.path}/${formData.slug}`;
+    }
+    return formData.slug;
+  };
+
+  // Convert path to display format
+  const getDisplayPath = (path: string): string => {
+    return path
+      .split('/')
+      .map(segment => 
+        segment
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')
+      )
+      .join(' > ');
+  };
+
   const handleSave = async () => {
     if (!validateForm()) {
       return;
@@ -134,15 +155,21 @@ export default function CategoryDialog({
     try {
       setIsSaving(true);
       
-      // Prepare category data with banner image
+      // Prepare category data
       const categoryData: any = {
-        ...formData,
-        bannerImage: bannerImages.length > 0 ? {
-          publicId: bannerImages[0].publicId,
-          url: bannerImages[0].url,
-          secureUrl: bannerImages[0].secureUrl,
-          altText: bannerImages[0].altText || formData.name
-        } : undefined
+        name: formData.name,
+        slug: formData.slug,
+        description: formData.description,
+        subtitle: formData.subtitle,
+        ...(bannerImages.length > 0 ? {
+          bannerImage: {
+            id: bannerImages[0].id,
+            publicId: bannerImages[0].publicId,
+            url: bannerImages[0].url,
+            secureUrl: bannerImages[0].secureUrl,
+            altText: bannerImages[0].altText || formData.name
+          }
+        } : {} )
       };
       
       if (mode === 'create') {
@@ -192,7 +219,7 @@ export default function CategoryDialog({
             <FolderTree className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1">
               <p className="text-sm font-medium">Parent Category</p>
-              <p className="text-xs text-muted-foreground">{parentCategory.name}</p>
+              <p className="text-xs text-muted-foreground">{getDisplayPath(parentCategory.path)}</p>
             </div>
             <Badge variant="secondary">Subcategory</Badge>
           </div>
@@ -255,6 +282,20 @@ export default function CategoryDialog({
             </p>
             {errors.slug && (
               <p className="text-sm text-red-500">{errors.slug}</p>
+            )}
+            
+            {/* Show full path preview */}
+            {formData.slug && (
+              <div className="mt-2 p-2 bg-muted rounded text-xs">
+                <span className="font-medium">Full Path: </span>
+                <code className="text-primary">{getFullPath()}</code>
+                <br />
+                <span className="font-medium">Display: </span>
+                <span className="text-muted-foreground">{getDisplayPath(getFullPath())}</span>
+                <br />
+                <span className="font-medium">URL: </span>
+                <code className="text-primary">/categories/{getFullPath()}</code>
+              </div>
             )}
           </div>
 

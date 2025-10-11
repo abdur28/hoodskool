@@ -13,17 +13,13 @@ import {
   startAfter,
   increment,
   serverTimestamp,
-  Timestamp,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase/config';
-import type { Product, CartItem, ProductFilters, PaginationParams } from '@/types/types';
+import type { Product, CartItem, ProductFilters, PaginationParams, Category, Collection } from '@/types/types';
 
 // ============ HELPER FUNCTIONS ============
 
-/**
- * Remove undefined values from objects (Firestore doesn't accept undefined)
- */
 const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> => {
   const result: any = {};
   Object.keys(obj).forEach(key => {
@@ -34,11 +30,236 @@ const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> => {
   return result as Partial<T>;
 };
 
-// ============ PRODUCT OPERATIONS ============
+/**
+ * Convert path with slashes to display path with " > "
+ * Example: "clothings/hood-wears/hoodies" -> "Clothings > Hood Wears > Hoodies"
+ */
+const pathToDisplayPath = (path: string): string => {
+  return path
+    .split('/')
+    .map(segment => 
+      segment
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    )
+    .join(' > ');
+};
 
 /**
- * Get all products with optional filtering
+ * Convert display path to slug path
+ * Example: "Clothings > Hood Wears > Hoodies" -> "clothings/hood-wears/hoodies"
  */
+const displayPathToPath = (displayPath: string): string => {
+  return displayPath
+    .split(' > ')
+    .map(segment => segment.toLowerCase().replace(/\s+/g, '-'))
+    .join('/');
+};
+
+// ============ CATEGORY OPERATIONS ============
+
+/**
+ * Get all categories
+ */
+export async function getAllCategories() {
+  try {
+    const categoriesRef = collection(db, 'categories');
+    const q = query(categoriesRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+
+    const categories = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Category[];
+
+    return { categories, error: null };
+  } catch (error: any) {
+    console.error('Get all categories error:', error);
+    return { categories: [], error: error.message };
+  }
+}
+
+/**
+ * Get category by path (with slashes)
+ * Example: "clothings/hood-wears/hoodies"
+ */
+export async function getCategoryByPath(path: string) {
+  try {
+    const categoriesRef = collection(db, 'categories');
+    const q = query(categoriesRef, where('path', '==', path), limit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      return {
+        category: { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Category,
+        error: null,
+      };
+    }
+
+    return { category: null, error: 'Category not found' };
+  } catch (error: any) {
+    console.error('Get category by path error:', error);
+    return { category: null, error: error.message };
+  }
+}
+
+/**
+ * Get category by slug (single level)
+ */
+export async function getCategoryBySlug(slug: string) {
+  try {
+    const categoriesRef = collection(db, 'categories');
+    const q = query(categoriesRef, where('slug', '==', slug), limit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      return {
+        category: { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Category,
+        error: null,
+      };
+    }
+
+    return { category: null, error: 'Category not found' };
+  } catch (error: any) {
+    console.error('Get category by slug error:', error);
+    return { category: null, error: error.message };
+  }
+}
+
+/**
+ * Get products by category path
+ * Converts slash path to display path for product matching
+ * Example: "clothings/hood-wears/hoodies" -> matches products with categoryPath "Clothings > Hood Wears > Hoodies"
+ */
+export async function getProductsByCategoryPath(categoryPath: string) {
+  try {
+    // Convert slash path to display path for product query
+    const displayPath = pathToDisplayPath(categoryPath);
+    
+    const productsRef = collection(db, 'products');
+    const q = query(
+      productsRef,
+      where('categoryPath', '==', displayPath),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const snapshot = await getDocs(q);
+    const products = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Product[];
+
+    return { products, error: null };
+  } catch (error: any) {
+    console.error('Get products by category path error:', error);
+    return { products: [], error: error.message };
+  }
+}
+
+/**
+ * Get products by category slug
+ */
+export async function getProductsByCategorySlug(slug: string) {
+  const { category } = await getCategoryBySlug(slug);
+  
+  if (!category) {
+    return { products: [], error: 'Category not found' };
+  }
+
+  return getProductsByCategoryPath(category.path);
+}
+
+/**
+ * Get category hierarchy
+ */
+export async function getCategoryHierarchy(categoryPath: string) {
+  try {
+    const categoriesRef = collection(db, 'categories');
+    const snapshot = await getDocs(categoriesRef);
+    
+    const allCategories = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Category[];
+
+    // Find current category
+    const currentCategory = allCategories.find(cat => cat.path === categoryPath);
+    
+    if (!currentCategory) {
+      return { parent: null, current: null, children: [], error: 'Category not found' };
+    }
+
+    // Find parent (one level up)
+    const pathParts = categoryPath.split('/');
+    const parentPath = pathParts.slice(0, -1).join('/');
+    const parent = parentPath ? allCategories.find(cat => cat.path === parentPath) : null;
+
+    // Find children (one level down)
+    const children = allCategories.filter(cat => {
+      const catParts = cat.path.split('/');
+      return catParts.length === pathParts.length + 1 && 
+             cat.path.startsWith(categoryPath + '/');
+    });
+
+    return { 
+      parent: parent || null, 
+      current: currentCategory, 
+      children, 
+      error: null 
+    };
+  } catch (error: any) {
+    console.error('Get category hierarchy error:', error);
+    return { parent: null, current: null, children: [], error: error.message };
+  }
+}
+
+// ============ COLLECTION OPERATIONS ============
+
+export async function getCollectionBySlug(slug: string) {
+  try {
+    const collectionsRef = collection(db, 'collections');
+    const q = query(collectionsRef, where('slug', '==', slug), limit(1));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      return {
+        collection: { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Collection,
+        error: null,
+      };
+    }
+
+    return { collection: null, error: 'Collection not found' };
+  } catch (error: any) {
+    console.error('Get collection by slug error:', error);
+    return { collection: null, error: error.message };
+  }
+}
+
+export async function getProductsByCollectionSlug(slug: string) {
+  try {
+    const productsRef = collection(db, 'products');
+    const q = query(
+      productsRef,
+      where('collectionSlug', '==', slug),
+      orderBy('createdAt', 'desc')
+    );
+    
+    const snapshot = await getDocs(q);
+    const products = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Product[];
+
+    return { products, error: null };
+  } catch (error: any) {
+    console.error('Get products by collection slug error:', error);
+    return { products: [], error: error.message };
+  }
+}
+
+// ============ PRODUCT OPERATIONS ============
+
 export async function getProducts(
   filters?: ProductFilters,
   pagination?: PaginationParams
@@ -47,18 +268,14 @@ export async function getProducts(
     const productsRef = collection(db, 'products');
     let q = query(productsRef);
 
-    // Apply filters
-    if (filters?.category) {
-      q = query(q, where('category', '==', filters.category));
-    }
-    if (filters?.subCategory) {
-      q = query(q, where('subCategory', '==', filters.subCategory));
+    if (filters?.categoryPath) {
+      q = query(q, where('categoryPath', '==', filters.categoryPath));
     }
     if (filters?.itemType) {
       q = query(q, where('itemType', '==', filters.itemType));
     }
     if (filters?.collection) {
-      q = query(q, where('collection', '==', filters.collection));
+      q = query(q, where('collectionSlug', '==', filters.collection));
     }
     if (filters?.inStock !== undefined) {
       q = query(q, where('inStock', '==', filters.inStock));
@@ -73,14 +290,12 @@ export async function getProducts(
       q = query(q, where('isBestseller', '==', true));
     }
 
-    // Apply ordering
     if (pagination?.orderBy) {
       q = query(q, orderBy(pagination.orderBy, pagination.orderDirection || 'desc'));
     } else {
       q = query(q, orderBy('createdAt', 'desc'));
     }
 
-    // Apply pagination
     if (pagination?.limit) {
       q = query(q, limit(pagination.limit));
     }
@@ -94,21 +309,28 @@ export async function getProducts(
       ...doc.data(),
     })) as Product[];
 
-    // Client-side filtering for complex queries
     if (filters?.minPrice !== undefined) {
-      products = products.filter((p) => p.price >= filters.minPrice!);
+      products = products.filter((p) => {
+        const price = p.prices?.[0]?.price || 0;
+        return price >= filters.minPrice!;
+      });
     }
     if (filters?.maxPrice !== undefined) {
-      products = products.filter((p) => p.price <= filters.maxPrice!);
+      products = products.filter((p) => {
+        const price = p.prices?.[0]?.price || 0;
+        return price <= filters.maxPrice!;
+      });
     }
     if (filters?.colors && filters.colors.length > 0) {
       products = products.filter((p) =>
-        filters.colors!.some((color) => p.colors.includes(color))
+        filters.colors!.some((color) => 
+          p.colors?.some(c => c.name === color)
+        )
       );
     }
     if (filters?.sizes && filters.sizes.length > 0) {
       products = products.filter((p) =>
-        filters.sizes!.some((size) => p.sizes.includes(size))
+        filters.sizes!.some((size) => p.sizes?.includes(size))
       );
     }
     if (filters?.search) {
@@ -117,7 +339,7 @@ export async function getProducts(
         (p) =>
           p.name.toLowerCase().includes(searchLower) ||
           p.description.toLowerCase().includes(searchLower) ||
-          p.tags.some((tag) => tag.toLowerCase().includes(searchLower))
+          p.tags?.some((tag) => tag.toLowerCase().includes(searchLower))
       );
     }
 
@@ -128,16 +350,12 @@ export async function getProducts(
   }
 }
 
-/**
- * Get single product by ID
- */
 export async function getProduct(productId: string) {
   try {
     const docRef = doc(db, 'products', productId);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      // Increment view count
       await updateDoc(docRef, {
         viewCount: increment(1),
       });
@@ -155,9 +373,6 @@ export async function getProduct(productId: string) {
   }
 }
 
-/**
- * Get product by slug
- */
 export async function getProductBySlug(slug: string) {
   try {
     const productsRef = collection(db, 'products');
@@ -167,7 +382,6 @@ export async function getProductBySlug(slug: string) {
     if (!snapshot.empty) {
       const docSnap = snapshot.docs[0];
 
-      // Increment view count
       await updateDoc(docSnap.ref, {
         viewCount: increment(1),
       });
@@ -185,36 +399,33 @@ export async function getProductBySlug(slug: string) {
   }
 }
 
-/**
- * Get products by ids
- */
 export async function getProductsByIds(productIds: string[]) {
-  const productsRef = collection(db, 'products');
-  const q = query(productsRef, where('__name__', 'in', productIds));
-  const snapshot = await getDocs(q);
+  try {
+    if (productIds.length === 0) {
+      return { products: [], error: null };
+    }
 
-  const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    const productsRef = collection(db, 'products');
+    const q = query(productsRef, where('__name__', 'in', productIds));
+    const snapshot = await getDocs(q);
 
-  return { products, error: null };
+    const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+
+    return { products, error: null };
+  } catch (error: any) {
+    console.error('Get products by ids error:', error);
+    return { products: [], error: error.message };
+  }
 }
 
-/**
- * Get featured products
- */
 export async function getFeaturedProducts(limitCount: number = 6) {
   return getProducts({ isFeatured: true }, { limit: limitCount });
 }
 
-/**
- * Get new arrivals
- */
 export async function getNewArrivals(limitCount: number = 8) {
   return getProducts({ isNew: true }, { limit: limitCount, orderBy: 'createdAt' });
 }
 
-/**
- * Get bestsellers
- */
 export async function getBestsellers(limitCount: number = 8) {
   return getProducts(
     { isBestseller: true },
@@ -222,15 +433,8 @@ export async function getBestsellers(limitCount: number = 8) {
   );
 }
 
-export async function getCollections(collectionName: string) {
-  return getProducts({ collection: collectionName });
-}
-
 // ============ CART OPERATIONS ============
 
-/**
- * Get user's cart
- */
 export async function getCart(userId: string) {
   try {
     const cartRef = collection(db, 'users', userId, 'cart');
@@ -248,17 +452,11 @@ export async function getCart(userId: string) {
   }
 }
 
-/**
- * Add item to cart
- */
 export async function addToCart(userId: string, item: Omit<CartItem, 'id'>) {
   try {
     const cartRef = collection(db, 'users', userId, 'cart');
-
-    // Remove undefined values before sending to Firestore
     const sanitizedItem = removeUndefined(item);
 
-    // Check if item already exists
     const q = query(
       cartRef,
       where('productId', '==', sanitizedItem.productId),
@@ -267,7 +465,6 @@ export async function addToCart(userId: string, item: Omit<CartItem, 'id'>) {
     const snapshot = await getDocs(q);
 
     if (!snapshot.empty) {
-      // Update quantity if item exists
       const existingDoc = snapshot.docs[0];
       const existingItem = existingDoc.data() as CartItem;
       const newQuantity = Math.min(
@@ -281,7 +478,6 @@ export async function addToCart(userId: string, item: Omit<CartItem, 'id'>) {
 
       return { cartItemId: existingDoc.id, error: null };
     } else {
-      // Add new item
       const docRef = await addDoc(cartRef, sanitizedItem);
       return { cartItemId: docRef.id, error: null };
     }
@@ -291,9 +487,6 @@ export async function addToCart(userId: string, item: Omit<CartItem, 'id'>) {
   }
 }
 
-/**
- * Update cart item quantity
- */
 export async function updateCartItemQuantity(
   userId: string,
   cartItemId: string,
@@ -309,9 +502,6 @@ export async function updateCartItemQuantity(
   }
 }
 
-/**
- * Remove item from cart
- */
 export async function removeFromCart(userId: string, cartItemId: string) {
   try {
     await deleteDoc(doc(db, 'users', userId, 'cart', cartItemId));
@@ -322,9 +512,6 @@ export async function removeFromCart(userId: string, cartItemId: string) {
   }
 }
 
-/**
- * Clear entire cart
- */
 export async function clearCart(userId: string) {
   try {
     const cartRef = collection(db, 'users', userId, 'cart');
@@ -343,9 +530,6 @@ export async function clearCart(userId: string) {
   }
 }
 
-/**
- * Sync cart from localStorage to Firebase
- */
 export async function syncCart(userId: string, localCartItems: CartItem[]) {
   try {
     const batch = writeBatch(db);
@@ -353,10 +537,7 @@ export async function syncCart(userId: string, localCartItems: CartItem[]) {
 
     for (const item of localCartItems) {
       const { id, ...itemData } = item;
-      
-      // Remove undefined values
       const sanitizedData = removeUndefined(itemData);
-      
       const docRef = doc(cartRef);
       batch.set(docRef, sanitizedData);
     }
@@ -371,9 +552,6 @@ export async function syncCart(userId: string, localCartItems: CartItem[]) {
 
 // ============ WISHLIST OPERATIONS ============
 
-/**
- * Add to wishlist
- */
 export async function addToWishlist(userId: string, productId: string) {
   try {
     const wishlistRef = collection(db, 'users', userId, 'wishlist');
@@ -388,9 +566,6 @@ export async function addToWishlist(userId: string, productId: string) {
   }
 }
 
-/**
- * Remove from wishlist
- */
 export async function removeFromWishlist(userId: string, productId: string) {
   try {
     const wishlistRef = collection(db, 'users', userId, 'wishlist');
@@ -408,9 +583,6 @@ export async function removeFromWishlist(userId: string, productId: string) {
   }
 }
 
-/**
- * Get wishlist
- */
 export async function getWishlist(userId: string) {
   try {
     const wishlistRef = collection(db, 'users', userId, 'wishlist');
@@ -418,7 +590,6 @@ export async function getWishlist(userId: string) {
 
     const productIds = snapshot.docs.map((doc) => doc.data().productId);
 
-    // Get full product details
     if (productIds.length === 0) {
       return { products: [], error: null };
     }
@@ -438,3 +609,6 @@ export async function getWishlist(userId: string) {
     return { products: [], error: error.message };
   }
 }
+
+// Export helper functions for use elsewhere
+export { pathToDisplayPath, displayPathToPath };

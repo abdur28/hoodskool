@@ -37,7 +37,7 @@ const showcaseImages = [
   },
 ];
 
-export default function ArtShowcase() {
+export default function ArtShowcase({isArt}: {isArt?: boolean}) {
   return (
     <section className="relative bg-background z-10">
       <div className="flex flex-col md:flex-row min-h-screen">
@@ -54,7 +54,7 @@ export default function ArtShowcase() {
             />
             
             {/* Overlay with Text */}
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            {!isArt && <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -109,7 +109,7 @@ export default function ArtShowcase() {
                   </CrossedLink>
                 </motion.div>
               </motion.div>
-            </div>
+            </div>}
           </div>
         </div>
 

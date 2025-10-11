@@ -27,19 +27,19 @@ const navigationStructure: NavigationItem[] = [
       {
         name: 'HOOD WEARS',
         items: [
-          { name: 'T-Shirts', href: '/clothings/hood-wears/t-shirts' },
-          { name: 'Hoodies', href: '/clothings/hood-wears/hoodies' },
-          { name: 'Shirts', href: '/clothings/hood-wears/shirts' },
-          { name: 'Pants', href: '/clothings/hood-wears/pants' },
-          { name: 'Jackets', href: '/clothings/hood-wears/jackets' },
+          { name: 'T-Shirts', href: '/categories/clothings/hood-wears/t-shirts' },
+          { name: 'Hoodies', href: '/categories/clothings/hood-wears/hoodies' },
+          { name: 'Shirts', href: '/categories/clothings/hood-wears/shirts' },
+          { name: 'Pants', href: '/categories/clothings/hood-wears/pants' },
+          { name: 'Jackets', href: '/categories/clothings/hood-wears/jackets' },
         ],
       },
       {
         name: 'BESPOKE/TAILORING',
         items: [
-          { name: 'Pant Trousers', href: '/clothings/bespoke/pant-trousers' },
-          { name: 'Waist Coats', href: '/clothings/bespoke/waist-coats' },
-          { name: 'Suits', href: '/clothings/bespoke/suits' },
+          { name: 'Pant Trousers', href: '/categories/clothings/bespoke/pant-trousers' },
+          { name: 'Waist Coats', href: '/categories/clothings/bespoke/waist-coats' },
+          { name: 'Suits', href: '/categories/clothings/bespoke/suits' },
         ],
       },
     ],
@@ -50,16 +50,16 @@ const navigationStructure: NavigationItem[] = [
       {
         name: 'ACCESSORIES',
         items: [
-          { name: 'Caps', href: '/accessories/caps' },
-          { name: 'Bucket Hats', href: '/accessories/bucket-hats' },
-          { name: 'Ski Masks', href: '/accessories/ski-masks' },
+          { name: 'Caps', href: '/categories/accessories/caps' },
+          { name: 'Bucket Hats', href: '/categories/accessories/bucket-hats' },
+          { name: 'Ski Masks', href: '/categories/accessories/ski-masks' },
         ],
       },
     ],
   },
-  { name: 'Candles & Matches', href: '/candles-matches' },
-  { name: 'Artwork', href: '/artwork' },
-  { name: 'Hoodhub', href: '/hoodhub' },
+  { name: 'Candles & Matches', href: '/categories/candles-and-matches' },
+  { name: 'Artwork', href: '/categories/artwork' },
+  { name: 'Hoodhub', href: 'https://hoodhub.ru' },
   { name: 'Contact', href: '/contact' },
 ];
 

@@ -351,13 +351,12 @@ export interface WishlistItem {
 // ============ FILTER & QUERY TYPES ============
 
 export interface ProductFilters {
-  category?: string;
-  subCategory?: string;
+  categoryPath?: string;        // e.g., "Clothing > Hoodies"
   itemType?: string;
-  collection?: string;
+  collection?: string;           // Collection slug
   minPrice?: number;
   maxPrice?: number;
-  colors?: string[];
+  colors?: string[];             // Color names
   sizes?: string[];
   tags?: string[];
   inStock?: boolean;
@@ -383,4 +382,15 @@ export interface CloudinaryUploadResult {
   width: number;
   height: number;
   format: string;
+}
+
+// ============ CONTACT FORM TYPES ============
+
+export interface ContactFormData {
+  name: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+  inquiryType?: "general" | "wholesale" | "collaboration" | "press" | "support" | "career" | "other"
 }

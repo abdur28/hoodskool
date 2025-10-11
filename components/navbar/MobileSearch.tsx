@@ -166,7 +166,7 @@ export default function MobileSearch({ isOpen, onClose }: MobileSearchProps) {
                   </h3>
                   <div className="space-y-2">
                     <CrossedLink
-                      href="/clothings/hood-wears"
+                      href="/categories/clothings/hood-wears"
                       lineColor="gold"
                       lineWidth={1}
                       animationDuration={0.2}
@@ -175,7 +175,7 @@ export default function MobileSearch({ isOpen, onClose }: MobileSearchProps) {
                       <span className="font-body text-base">Hood Wears</span>
                     </CrossedLink>
                     <CrossedLink
-                      href="/clothings/bespoke"
+                      href="/categories/clothings/bespoke"
                       lineColor="gold"
                       lineWidth={1}
                       animationDuration={0.2}
@@ -184,7 +184,7 @@ export default function MobileSearch({ isOpen, onClose }: MobileSearchProps) {
                       <span className="font-body text-base">Bespoke/Tailoring</span>
                     </CrossedLink>
                     <CrossedLink
-                      href="/accessories"
+                      href="/categories/accessories"
                       lineColor="gold"
                       lineWidth={1}
                       animationDuration={0.2}
@@ -193,7 +193,7 @@ export default function MobileSearch({ isOpen, onClose }: MobileSearchProps) {
                       <span className="font-body text-base">Accessories</span>
                     </CrossedLink>
                     <CrossedLink
-                      href="/candles-matches"
+                      href="/categories/candles-and-matches"
                       lineColor="gold"
                       lineWidth={1}
                       animationDuration={0.2}
