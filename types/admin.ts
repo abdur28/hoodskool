@@ -51,6 +51,136 @@ export interface FetchOptions {
   orderDirection?: 'asc' | 'desc';
 }
 
+// ============ TRANSACTION TYPES ============
+
+export type TransactionStatus = 'success' | 'pending' | 'failed' | 'refunded';
+export type PaymentMethodType = 'Credit Card' | 'PayPal' | 'Stripe' | 'Bank Transfer' | 'Cash on Delivery';
+
+export interface Transaction {
+  id: string;
+  orderNumber: string;
+  customer: string;
+  email: string;
+  amount: number;
+  currency: string;
+  status: TransactionStatus;
+  paymentMethod: PaymentMethodType;
+  date: Date;
+  description: string;
+}
+
+// ============ ANALYTICS TYPES ============
+
+export interface CustomerAnalytics {
+  totalCustomers: number;
+  newCustomersToday: number;
+  newCustomersThisWeek: number;
+  newCustomersThisMonth: number;
+  activeCustomers: number;
+  customerGrowthRate: number;
+  topCustomers: Array<{
+    uid: string;
+    name: string;
+    email: string;
+    totalOrders: number;
+    revenues: Array<{
+      currency: string;
+      amount: number;
+    }>;
+  }>;
+  customersByLocation: Array<{
+    location: string;
+    count: number;
+  }>;
+}
+
+export interface ProductAnalytics {
+  totalProducts: number;
+  inStockProducts: number;
+  outOfStockProducts: number;
+  lowStockProducts: number;
+  totalViews: number;
+  totalSales: number;
+  topSellingProducts: Array<{
+    id: string;
+    name: string;
+    salesCount: number;
+    revenue: number;
+    viewCount: number;
+  }>;
+  topViewedProducts: Array<{
+    id: string;
+    name: string;
+    viewCount: number;
+    salesCount: number;
+  }>;
+  categoryDistribution: Array<{
+    category: string;
+    count: number;
+  }>;
+}
+
+export interface CurrencyRevenue {
+  currency: string;
+  totalRevenue: number;
+  revenueToday: number;
+  revenueThisWeek: number;
+  revenueThisMonth: number;
+  averageOrderValue: number;
+  averageTransactionValue?: number;
+}
+
+export interface OrderAnalytics {
+  totalOrders: number;
+  pendingOrders: number;
+  processingOrders: number;
+  shippedOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+  ordersToday: number;
+  ordersThisWeek: number;
+  ordersThisMonth: number;
+  orderGrowthRate: number;
+  revenueGrowthRate: number;
+  revenues: CurrencyRevenue[];
+  ordersByStatus: Array<{
+    status: OrderStatus;
+    count: number;
+    revenues: Array<{
+      currency: string;
+      amount: number;
+    }>;
+  }>;
+}
+
+export interface TransactionAnalytics {
+  totalTransactions: number;
+  successfulTransactions: number;
+  pendingTransactions: number;
+  failedTransactions: number;
+  refundedTransactions: number;
+  revenues: CurrencyRevenue[];
+  transactionsToday: number;
+  transactionsThisWeek: number;
+  transactionsThisMonth: number;
+  paymentMethodDistribution: Array<{
+    method: PaymentMethodType;
+    count: number;
+    revenues: Array<{
+      currency: string;
+      amount: number;
+    }>;
+  }>;
+}
+
+export interface AdminAnalytics {
+  customers: CustomerAnalytics;
+  products: ProductAnalytics;
+  orders: OrderAnalytics;
+  transactions: TransactionAnalytics;
+  lastUpdated: string;
+}
+
 // ============ ADMIN USER DATA STORE ============
 
 export interface AdminUserDataStore {
@@ -156,29 +286,24 @@ export interface AdminProductDataStore {
   resetProducts: () => void;
 }
 
-// ============ ADMIN ANALYTICS ============
+// ============ ADMIN ANALYTICS DATA STORE ============
 
-export interface AdminAnalytics {
-  totalUsers: number;
-  totalOrders: number;
-  totalRevenue: number;
-  totalProducts: number;
+export interface AdminAnalyticsDataStore {
+  // State
+  analytics: AdminAnalytics | null;
+  transactions: Transaction[];
   
-  newUsersThisMonth: number;
-  ordersThisMonth: number;
-  revenueThisMonth: number;
+  // Loading & Error states
+  loading: AdminLoadingState;
+  error: AdminErrorState;
   
-  averageOrderValue: number;
-  conversionRate: number;
-  
-  topProducts: Array<{
-    productId: string;
-    name: string;
-    salesCount: number;
-    revenue: number;
-  }>;
-  
-  recentOrders: Order[];
+  // Methods
+  fetchAnalytics: () => Promise<void>;
+  fetchCustomerAnalytics: () => Promise<CustomerAnalytics>;
+  fetchProductAnalytics: () => Promise<ProductAnalytics>;
+  fetchOrderAnalytics: () => Promise<OrderAnalytics>;
+  fetchTransactionAnalytics: () => Promise<TransactionAnalytics>;
+  resetAnalytics: () => void;
 }
 
 // ============ ADMIN MAILER TYPES ============
@@ -290,7 +415,8 @@ export interface AdminStore extends
   AdminCategoryDataStore, 
   AdminCollectionDataStore, 
   AdminProductDataStore,
-  AdminMailerDataStore {
+  AdminMailerDataStore,
+  AdminAnalyticsDataStore {
   // Global methods
   resetErrors: () => void;
 }

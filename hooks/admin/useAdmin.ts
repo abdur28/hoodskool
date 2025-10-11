@@ -6,6 +6,7 @@ import useAdminProductsData from "./useAdminProductsData";
 import useAdminCollectionsData from "./useAdminCollectionsData";
 import useAdminOrdersData from "./useAdminOrdersData";
 import useAdminMailer from "./useAdminMailer";
+import useAdminAnalyticsData from "./useAdminAnalyticsData";
 
 /**
  * Main admin hook that combines all specialized admin hooks
@@ -19,6 +20,7 @@ const useAdmin = create<AdminStore>((set, get) => {
   const productDataState = useAdminProductsData.getState();
   const orderDataState = useAdminOrdersData.getState();
   const mailerDataState = useAdminMailer.getState();
+  const analyticsDataState = useAdminAnalyticsData.getState();
 
   // Helper function to wrap async methods to ensure direct updates to main store
   const wrapAsyncMethod = (method: Function, storeUpdater: Function) => {
@@ -99,6 +101,17 @@ const useAdmin = create<AdminStore>((set, get) => {
       return methods;
     }, {} as Record<string, any>);
 
+  // Wrap all analytics methods
+  const wrappedAnalyticsMethods = Object.keys(analyticsDataState)
+    .filter(key => typeof analyticsDataState[key as keyof typeof analyticsDataState] === 'function')
+    .reduce((methods, key) => {
+      methods[key] = wrapAsyncMethod(
+        analyticsDataState[key as keyof typeof analyticsDataState] as Function,
+        () => useAdminAnalyticsData.getState()
+      );
+      return methods;
+    }, {} as Record<string, any>);
+
   // Global reset errors function
   const resetErrors = () => {
     useAdminUsersData.setState(state => ({
@@ -118,6 +131,9 @@ const useAdmin = create<AdminStore>((set, get) => {
     }));
     useAdminMailer.setState(state => ({
       error: { ...state.error, users: null, adminAction: null }
+    }));
+    useAdminAnalyticsData.setState(state => ({
+      error: { ...state.error, analytics: null, adminAction: null }
     }));
   };
 
@@ -164,6 +180,13 @@ const useAdmin = create<AdminStore>((set, get) => {
     set((currentState) => ({ ...currentState, ...stateWithoutMethods }));
   });
 
+  useAdminAnalyticsData.subscribe((state) => {
+    const stateWithoutMethods = Object.fromEntries(
+      Object.entries(state).filter(([_, value]) => typeof value !== 'function')
+    );
+    set((currentState) => ({ ...currentState, ...stateWithoutMethods }));
+  });
+
   // Create the combined store
   return {
     ...userDataState,
@@ -172,12 +195,14 @@ const useAdmin = create<AdminStore>((set, get) => {
     ...productDataState,
     ...orderDataState,
     ...mailerDataState,
+    ...analyticsDataState,
     ...wrappedUserMethods,
     ...wrappedCategoryMethods,
     ...wrappedCollectionMethods,
     ...wrappedProductMethods,
     ...wrappedOrderMethods,
     ...wrappedMailerMethods,
+    ...wrappedAnalyticsMethods,
     resetErrors,
   };
 });

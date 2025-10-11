@@ -136,6 +136,7 @@ const useAdminCategoriesData = create<AdminCategoryDataStore>((set, get) => ({
     orders: false,
     products: false,
     categories: false,
+    collections: false,
     analytics: false,
     adminAction: false
   },
@@ -144,6 +145,7 @@ const useAdminCategoriesData = create<AdminCategoryDataStore>((set, get) => ({
     orders: null,
     products: null,
     categories: null,
+    collections: null,
     analytics: null,
     adminAction: null
   },
@@ -151,7 +153,8 @@ const useAdminCategoriesData = create<AdminCategoryDataStore>((set, get) => ({
     users: { lastDoc: null, hasMore: false },
     orders: { lastDoc: null, hasMore: false },
     products: { lastDoc: null, hasMore: false },
-    categories: { lastDoc: null, hasMore: false }
+    categories: { lastDoc: null, hasMore: false },
+    collections: { lastDoc: null, hasMore: false },
   },
   
   // Reset methods
