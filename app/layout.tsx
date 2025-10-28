@@ -46,6 +46,15 @@ export default function RootLayout({
       <body
         className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
       >
+        
+      </body>
+    </html>
+  );
+  return (
+    <html lang="en">
+      <body
+        className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
+      >
         <CurrencyProvider>
           <AuthProvider>
             <CartInitializerContext />
