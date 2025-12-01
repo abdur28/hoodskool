@@ -41,15 +41,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <body
-        className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
-      >
+  // return (
+  //   <html lang="en">
+  //     <body
+  //       className={`${bebasNeue.variable} ${inter.variable} ${sluggerMonogram.variable} antialiased`}
+  //     >
        
-      </body>
-    </html>
-  )
+  //     </body>
+  //   </html>
+  // )
 
   return (
     <html lang="en">
