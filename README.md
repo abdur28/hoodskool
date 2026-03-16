@@ -2,7 +2,7 @@
 
 > A full-stack e-commerce platform for an urban streetwear brand — featuring product catalog, shopping cart, checkout, wishlists, product reviews, inventory tracking, admin dashboard, and order management.
 
-**Live:** [hoodskool.vercel.app](https://hoodskool.vercel.app)
+**Live:** [hoodskool](https://hoodskool.vercel.app)
 
 ---
 
