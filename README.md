@@ -9,6 +9,8 @@
 ## Screenshots
 
 ### Storefront
+![Hoodskool Homepage](hoodskool1.png)
+*Product categories: Clothing, Accessories, Candles & Matches, and Artwork*
 ![Hoodskool Homepage](hoodskool.png)
 *Product categories: Clothing, Accessories, Candles & Matches, and Artwork*
 
